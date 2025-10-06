@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  simulator:
+    build: .
+    container_name: simulator
+    environment:
+      - SLEEP_TIME=0.25

@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "EeybvIRhslbOBkO+xrcDertrSusDs45UPB/QwSd8IZk=",
+  "Source": "EventIngestor",
+  "BasePath": "_content/EventIngestor",
+  "Mode": "Default",
+  "ManifestType": "Publish",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

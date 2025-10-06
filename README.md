@@ -2,11 +2,11 @@
 
 Este repositorio contiene varios contenedores que representan servicios independientes:
 
-- **API-Event-Ingestor** → Servicio .NET para ingestar eventos.
-- **Database** → Contenedor de base de datos.
-- **Event-Correlator** → Servicio para correlacionar eventos.
 - **Server-Kafka** → Servidor de mensajería.
-- **Simulator-Events** → Simulador de eventos de prueba.
+- **API-Event-Ingestor** → Servicio .NET para ingestar eventos.
+- **Correlator** → Servicio para correlacionar eventos.
+- **Simulator** → Simulador de eventos de prueba.
+- **Database** → Contenedor de base de datos.
 
 ## Requisitos
 
@@ -21,10 +21,18 @@ Este repositorio contiene varios contenedores que representan servicios independ
    cd proyecto-arquitectura-2
    ```
 
+# Levantar Contenedor individual de Server-Kafka
+
+- Ingresar al directorio raíz del contenedor Server-Kafka dentro de la terminal
+- Ejecutar los siguientes comandos: docker-compose up -d
+- Ingresar a la terminal dentro de docker para el conetenedor de Server-Kafka
+- Entrar al modo comandos de Linux, comando wsl + Enter
+- Copiar y Ejecutar comandos para creación de topics de eventos y alertas, dentro de archivo topics.md
+
 ## Levantar Contenedor individual de API-Event-Ingestor
 
-- Ingresar al contenedor que se desea utilizar
-- docker-compose up --build
+- Ingresar al directorio raíz del contenedor API-Event-Ingestor dentro de la terminal
+- Ejecutar los siguientes comandos: docker-compose up --build
 
 ## Endpoint `http://localhost:5245/swagger/index.html`
 
@@ -33,6 +41,18 @@ Este repositorio contiene varios contenedores que representan servicios independ
 | POST   | `/events`        | Publica un evento en kafka                                 | `curl http://localhost:5245/events`               |
 | ------ | ---------------  | ---------------------------------------------------------- | ------------------------------------------------- |
 | GET    | `/events/health` | Verifica la salud del endpoint                             | `curl http://localhost:5245/events/health`        |
+
+# Levantar Contenedor individual de Simulador
+
+- Ingresar al directorio raíz del contenedor Simulador dentro de la terminal
+- Ejecutar los siguientes comandos: docker-compose up --build
+
+# Levantar Contenedor individual de Correlator
+
+- Ingresar al directorio raíz del contenedor Correlator dentro de la terminal
+- Ejecutar los siguientes comandos:
+  docker-compose build
+  docker-compose up -d
 
 # Detener los contenedores
 
