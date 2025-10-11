@@ -35,11 +35,11 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
-  Correlator:
+  correlator:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: Correlator
+    container_name: correlator
     depends_on:
       - kafka
       - postgres

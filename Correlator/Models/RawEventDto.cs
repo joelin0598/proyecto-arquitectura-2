@@ -1,6 +1,7 @@
 namespace EventProcessor.Models;
 public class RawEventDto
 {
+    public string? event_version { get; set; }
     public string? event_type { get; set; }
     public string? correlation_id { get; set; }
     public string? trace_id { get; set; }
@@ -9,6 +10,7 @@ public class RawEventDto
     public string? source { get; set; }
     public string? severity { get; set; }
     public Geo? geo { get; set; }
+    public string? timestamp { get; set; }
     public Payload? payload { get; set; }
 }
 

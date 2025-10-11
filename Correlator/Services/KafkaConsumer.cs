@@ -5,6 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using EventProcessor.Data;
 using EventProcessor.Models;
 using System.Text.Json;
+using StackExchange.Redis;
+using Correlator.Services;
+using Correlator.Models;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace EventProcessor.Services;
 
@@ -12,11 +16,13 @@ public class KafkaConsumer : BackgroundService
 {
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
+    private readonly IDatabase _redisDatabase;
 
-    public KafkaConsumer(IServiceProvider services, IConfiguration config)
+    public KafkaConsumer(IServiceProvider services, IConfiguration config, IConnectionMultiplexer redisConnection)
     {
         _services = services;
         _config = config;
+        _redisDatabase = redisConnection.GetDatabase();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,29 +55,38 @@ public class KafkaConsumer : BackgroundService
                 {
 
                     if (raw is null || raw.geo is null || raw.payload is null)
-{
-    Console.WriteLine("⚠️ Evento inválido: faltan datos esenciales.");
-    return;
-}
+                    {
+                        Console.WriteLine("⚠️ Evento inválido: faltan datos esenciales.");
+                        return;
+                    }
 
-var evento = new EventEntity
-{
-    Id = Guid.NewGuid(),
-    EventType = raw.event_type,
-    Producer = raw.producer,
-    Source = raw.source,
-    CorrelationId = raw.correlation_id,
-    TraceId = raw.trace_id,
-    PartitionKey = raw.partition_key,
-    GeoZone = raw.geo.zone,
-    Latitude = raw.geo.lat,
-    Longitude = raw.geo.lon,
-    Severity = raw.severity,
-    AlertType = raw.payload.tipo_de_alerta,
-    DeviceId = raw.payload.identificador_dispositivo,
-    UserContext = raw.payload.user_context,
-    Timestamp = DateTime.UtcNow
-};
+                    string redisKey = "events";
+
+                    var eventsList = await _redisDatabase.ListRangeAsync(redisKey);
+
+                    if (eventsList.Length > 0)
+                    {
+                        List<RawEventDto> correlatedEvents = eventsList.Select(x => JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
+                        await CorrelateEventsByDistance(correlatedEvents, raw);
+                    }
+
+                    var evento = new EventEntity
+                    {
+                        EventId = Guid.NewGuid(),
+                        EventType = raw.event_type,
+                        Producer = raw.producer,
+                        Source = raw.source,
+                        CorrelationId = Guid.Parse(raw.correlation_id),
+                        TraceId = Guid.Parse(raw.trace_id),
+                        PartitionKey = raw.partition_key,
+                        TsUtc = DateTime.UtcNow,
+                        Zone = raw.geo.zone,
+                        GeoLat =   raw.geo.lat,
+                        GeoLon = raw.geo.lon,
+                        Severity = raw.severity,
+                        Payload = raw.payload.ToString(),
+                        EventVersion = raw.event_version,
+                    };
 
 
                     using var scope = _services.CreateScope();
@@ -80,7 +95,7 @@ var evento = new EventEntity
                     db.Events.Add(evento);
                     await db.SaveChangesAsync();
 
-                    Console.WriteLine($"✅ Evento guardado: {evento.Id} | Zona: {evento.GeoZone} | Tipo: {evento.AlertType}");
+                    Console.WriteLine($"✅ Evento guardado: {evento.EventId} | Zona: {evento.Zone} | Tipo: {raw.event_type}");
                 }
                 else
                 {
@@ -94,5 +109,86 @@ var evento = new EventEntity
         }
 
         consumer.Close();
+    }
+
+    public async Task PublishAsync(object evento)
+    {
+        const string _topic = "correlated.alerts";
+        var config = new ProducerConfig
+        {
+            BootstrapServers = _config["Kafka:BootstrapServers"]
+        };
+
+        using var producer = new ProducerBuilder<Null, string>(config).Build();
+
+        var json = JsonSerializer.Serialize(evento);
+
+        var message = new Message<Null, string> { Value = json };
+
+        var deliveryResult = await producer.ProduceAsync(_topic, message);
+
+        Console.WriteLine($"Alerta publicado en Kafka: {deliveryResult.TopicPartitionOffset}");
+    }
+
+    private async Task CorrelateEventsByDistance(List<RawEventDto> correlatedEvents, RawEventDto newEvent)
+    {
+        const double distanceThreshold = 1.0;
+
+        var eventsInSameZone = correlatedEvents
+            .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold && (e.severity== "warning" || e.severity == "critical"))
+            .ToList();
+
+        if (eventsInSameZone.Count >= 5)
+        {
+            Console.WriteLine($"⚠️ Más de 5 eventos cercanos (distancia <= {distanceThreshold} km) generados. Generando alerta...");
+            await makeAlert(eventsInSameZone);
+        }
+
+        if (newEvent.severity == "critical")
+        {
+            Console.WriteLine($"⚠️ Evento másizo (alta severidad) detectado: {newEvent.event_type} | Generando alerta...");
+            await makeAlert(eventsInSameZone);
+        }
+    }
+
+    private async Task makeAlert(List<RawEventDto> events)
+    {
+        if (events.Count > 0)
+        {
+            string correlation;
+            if (events[0].correlation_id != null)
+            {
+                correlation = events[0].correlation_id;
+            }
+            else
+            {
+                correlation = Guid.NewGuid().ToString();
+            }
+            DateTime minTimestamp = events
+              .Where(e => DateTime.TryParse(e.timestamp, out _)) // Filtra los eventos con un timestamp válido
+              .Min(e => DateTime.Parse(e.timestamp));
+
+            DateTime maxTimestamp = events
+                .Where(e => DateTime.TryParse(e.timestamp, out _)) // Filtra los eventos con un timestamp válido
+                .Max(e => DateTime.Parse(e.timestamp));
+
+            Alert alert = new Alert()
+            {
+                AlertId = Guid.NewGuid(),
+                CorrelationId = Guid.Parse(correlation),
+                Type = Utils.DetermineAlertType(events),
+                Score = Utils.CalculateAlertScore(events),
+                WindowStart = minTimestamp,
+                WindowEnd = maxTimestamp,
+                Evidence = events.Select(e => e.correlation_id).ToString(),
+                CreatedAt = DateTime.Now
+            };
+            await PublishAsync(alert);
+
+            using var scope = _services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<EventDbContext>();
+            db.Alerts.Add(alert);
+            await db.SaveChangesAsync();
+        }   
     }
 }

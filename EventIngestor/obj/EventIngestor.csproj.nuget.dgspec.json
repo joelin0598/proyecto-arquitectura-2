@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "C:\\GitHub\\Proyecto-Monitoreo-Urbano\\EventIngestor\\EventIngestor.csproj": {}
+    "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj": {}
   },
   "projects": {
-    "C:\\GitHub\\Proyecto-Monitoreo-Urbano\\EventIngestor\\EventIngestor.csproj": {
+    "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\GitHub\\Proyecto-Monitoreo-Urbano\\EventIngestor\\EventIngestor.csproj",
+        "projectUniqueName": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
         "projectName": "EventIngestor",
-        "projectPath": "C:\\GitHub\\Proyecto-Monitoreo-Urbano\\EventIngestor\\EventIngestor.csproj",
-        "packagesPath": "C:\\Users\\joelm\\.nuget\\packages\\",
-        "outputPath": "C:\\GitHub\\Proyecto-Monitoreo-Urbano\\EventIngestor\\obj\\",
+        "projectPath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
+        "packagesPath": "C:\\Users\\gbval\\.nuget\\packages\\",
+        "outputPath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "D:\\Programas\\Visual Studio Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\joelm\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\gbval\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -65,6 +71,10 @@
               "target": "Package",
               "version": "[9.0.4, )"
             },
+            "StackExchange.Redis": {
+              "target": "Package",
+              "version": "[2.9.25, )"
+            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.6.2, )"
@@ -89,7 +99,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.413/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "D:\\Programas\\NETDotnet\\Net8\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
