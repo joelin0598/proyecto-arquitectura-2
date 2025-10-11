@@ -642,6 +642,25 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
+      "Microsoft.Extensions.Caching.StackExchangeRedis/9.0.9": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.Caching.Abstractions": "9.0.9",
+          "Microsoft.Extensions.Logging.Abstractions": "9.0.9",
+          "Microsoft.Extensions.Options": "9.0.9",
+          "StackExchange.Redis": "2.7.27"
+        },
+        "compile": {
+          "lib/net8.0/Microsoft.Extensions.Caching.StackExchangeRedis.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.Caching.StackExchangeRedis.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.Extensions.Configuration.Abstractions/9.0.9": {
         "type": "package",
         "dependencies": {
@@ -2667,6 +2686,27 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "Microsoft.Extensions.Caching.StackExchangeRedis/9.0.9": {
+      "sha512": "1xfeN4YV8LMEPirDEj1JfQUKAlZRu4cl/FUJYzGZwgWr69/AAg4cM1ohL9k9jcj+krgrlqBWw9GXk/Fo79UwGQ==",
+      "type": "package",
+      "path": "microsoft.extensions.caching.stackexchangeredis/9.0.9",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net462/Microsoft.Extensions.Caching.StackExchangeRedis.dll",
+        "lib/net462/Microsoft.Extensions.Caching.StackExchangeRedis.xml",
+        "lib/net8.0/Microsoft.Extensions.Caching.StackExchangeRedis.dll",
+        "lib/net8.0/Microsoft.Extensions.Caching.StackExchangeRedis.xml",
+        "lib/net9.0/Microsoft.Extensions.Caching.StackExchangeRedis.dll",
+        "lib/net9.0/Microsoft.Extensions.Caching.StackExchangeRedis.xml",
+        "lib/netstandard2.0/Microsoft.Extensions.Caching.StackExchangeRedis.dll",
+        "lib/netstandard2.0/Microsoft.Extensions.Caching.StackExchangeRedis.xml",
+        "microsoft.extensions.caching.stackexchangeredis.9.0.9.nupkg.sha512",
+        "microsoft.extensions.caching.stackexchangeredis.nuspec"
+      ]
+    },
     "Microsoft.Extensions.Configuration.Abstractions/9.0.9": {
       "sha512": "p5RKAY9POvs3axwA/AQRuJeM8AHuE8h4qbP1NxQeGm0ep46aXz1oCLAp/oOYxX1GsjStgdhHrN3XXLLXr0+b3w==",
       "type": "package",
@@ -3625,6 +3665,7 @@
       "Microsoft.AspNetCore.OpenApi >= 8.0.19",
       "Microsoft.EntityFrameworkCore >= 9.0.9",
       "Microsoft.EntityFrameworkCore.Design >= 9.0.9",
+      "Microsoft.Extensions.Caching.StackExchangeRedis >= 9.0.9",
       "Npgsql.EntityFrameworkCore.PostgreSQL >= 9.0.4",
       "StackExchange.Redis >= 2.9.25",
       "Swashbuckle.AspNetCore >= 6.6.2"
@@ -3637,11 +3678,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
+      "projectUniqueName": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj",
       "projectName": "EventIngestor",
-      "projectPath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
+      "projectPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj",
       "packagesPath": "C:\\Users\\gbval\\.nuget\\packages\\",
-      "outputPath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\obj\\",
+      "outputPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "D:\\Programas\\Visual Studio Shared\\NuGetPackages"
@@ -3694,6 +3735,10 @@
           "Microsoft.EntityFrameworkCore.Design": {
             "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
             "suppressParent": "All",
+            "target": "Package",
+            "version": "[9.0.9, )"
+          },
+          "Microsoft.Extensions.Caching.StackExchangeRedis": {
             "target": "Package",
             "version": "[9.0.9, )"
           },

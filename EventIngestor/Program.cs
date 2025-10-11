@@ -8,7 +8,10 @@ builder.WebHost.UseUrls("http://*:5245");
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
-string redisConnection = "localhost"; // Asegúrate de poner la conexión correcta a tu servidor Redis
+string redisConnection = "localhost:6379"; // Asegúrate de poner la conexión correcta a tu servidor Redis
+//builder.Services.AddStackExchangeRedisCache(option=> option.Configuration =redisConnection);
+//var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
+//configurationOptions.AbortOnConnectFail = false; // Permite reintentos automáticos
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnection));
 var app = builder.Build();
 

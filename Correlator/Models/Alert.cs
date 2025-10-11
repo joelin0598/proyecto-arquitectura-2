@@ -1,43 +1,25 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Correlator.Models
+namespace Correlator.Models;
+
+public partial class alert
 {
-    [Table("alerts")]
-    public class Alert
-    {
-        [Key]
-        [Column("alert_id")]
-        public Guid AlertId { get; set; }
+    public Guid alert_id { get; set; }
 
-        [Column("correlation_id")]
-        public Guid? CorrelationId { get; set; }
+    public Guid? correlation_id { get; set; }
 
-        [Required]
-        [Column("type")]
-        public string Type { get; set; }
+    public string type { get; set; } = null!;
 
-        [Column("score")]
-        public double? Score { get; set; }
+    public decimal? score { get; set; }
 
-        [Column("zone")]
-        public string Zone { get; set; }
+    public string? zone { get; set; }
 
-        [Column("window_start")]
-        public DateTimeOffset? WindowStart { get; set; }
+    public DateTime? window_start { get; set; }
 
-        [Column("window_end")]
-        public DateTimeOffset? WindowEnd { get; set; }
+    public DateTime? window_end { get; set; }
 
-        [Column("evidence")]
-        public string Evidence { get; set; } // You may want to store it as a JSON or string, depending on your requirements.
+    public string? evidence { get; set; }
 
-        [Required]
-        [Column("created_at")]
-        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    }
+    public DateTime created_at { get; set; }
 }

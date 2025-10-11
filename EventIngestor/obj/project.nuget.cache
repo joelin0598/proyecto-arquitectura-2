@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "BmWO7/8n9jw=",
+  "dgSpecHash": "825JDLlYDI0=",
   "success": true,
-  "projectFilePath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
+  "projectFilePath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\gbval\\.nuget\\packages\\confluent.kafka\\2.11.1\\confluent.kafka.2.11.1.nupkg.sha512",
     "C:\\Users\\gbval\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
@@ -25,6 +25,7 @@
     "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.apidescription.server\\6.0.5\\microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
     "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.caching.abstractions\\9.0.9\\microsoft.extensions.caching.abstractions.9.0.9.nupkg.sha512",
     "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.caching.memory\\9.0.9\\microsoft.extensions.caching.memory.9.0.9.nupkg.sha512",
+    "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.caching.stackexchangeredis\\9.0.9\\microsoft.extensions.caching.stackexchangeredis.9.0.9.nupkg.sha512",
     "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\9.0.9\\microsoft.extensions.configuration.abstractions.9.0.9.nupkg.sha512",
     "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\9.0.9\\microsoft.extensions.dependencyinjection.9.0.9.nupkg.sha512",
     "C:\\Users\\gbval\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\9.0.9\\microsoft.extensions.dependencyinjection.abstractions.9.0.9.nupkg.sha512",

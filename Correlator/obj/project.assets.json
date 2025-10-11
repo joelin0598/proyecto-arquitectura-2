@@ -4253,11 +4253,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj",
+      "projectUniqueName": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\Correlator.csproj",
       "projectName": "Correlator",
-      "projectPath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj",
+      "projectPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\Correlator.csproj",
       "packagesPath": "C:\\Users\\gbval\\.nuget\\packages\\",
-      "outputPath": "D:\\backup\\Escritorio\\Proyectos\\Arqui 2\\proyecto-arquitectura-2\\Correlator\\obj\\",
+      "outputPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "D:\\Programas\\Visual Studio Shared\\NuGetPackages"

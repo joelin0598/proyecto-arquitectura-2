@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: cache-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: ui-redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight:/data
+    depends_on:
+      redis:
+        condition: service_started
+
+volumes:
+  redisdata:
+  redisinsight:  # Aquí defines el volumen 'redisinsight'

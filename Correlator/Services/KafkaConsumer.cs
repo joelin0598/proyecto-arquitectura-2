@@ -2,13 +2,12 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using EventProcessor.Data;
 using EventProcessor.Models;
 using System.Text.Json;
 using StackExchange.Redis;
 using Correlator.Services;
 using Correlator.Models;
-using static System.Formats.Asn1.AsnWriter;
+using Correlator.Data;
 
 namespace EventProcessor.Services;
 
@@ -46,7 +45,7 @@ public class KafkaConsumer : BackgroundService
                 var result = consumer.Consume(stoppingToken);
                 var json = result.Message.Value;
 
-                var raw = JsonSerializer.Deserialize<RawEventDto>(json, new JsonSerializerOptions
+                var raw = System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
@@ -66,36 +65,36 @@ public class KafkaConsumer : BackgroundService
 
                     if (eventsList.Length > 0)
                     {
-                        List<RawEventDto> correlatedEvents = eventsList.Select(x => JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
+                        List<RawEventDto> correlatedEvents = eventsList.Select(x => System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
                         await CorrelateEventsByDistance(correlatedEvents, raw);
                     }
 
-                    var evento = new EventEntity
+                    var evento = new _event
                     {
-                        EventId = Guid.NewGuid(),
-                        EventType = raw.event_type,
-                        Producer = raw.producer,
-                        Source = raw.source,
-                        CorrelationId = Guid.Parse(raw.correlation_id),
-                        TraceId = Guid.Parse(raw.trace_id),
-                        PartitionKey = raw.partition_key,
-                        TsUtc = DateTime.UtcNow,
-                        Zone = raw.geo.zone,
-                        GeoLat =   raw.geo.lat,
-                        GeoLon = raw.geo.lon,
-                        Severity = raw.severity,
-                        Payload = raw.payload.ToString(),
-                        EventVersion = raw.event_version,
+                        event_id = Guid.NewGuid(),
+                        event_type = raw.event_type,
+                        producer = raw.producer,
+                        source = raw.source,
+                        correlation_id = Guid.Parse(raw.correlation_id),
+                        trace_id = Guid.Parse(raw.trace_id),
+                        partition_key = raw.partition_key,
+                        ts_utc = DateTime.Now.ToUniversalTime(),
+                        zone = raw.geo.zone,
+                        geo_lat = (decimal)raw.geo.lat,
+                        geo_lon = (decimal)raw.geo.lon,
+                        severity = raw.severity,
+                        payload = System.Text.Json.JsonSerializer.Serialize(raw.payload),
+                        event_version = raw.event_version,
                     };
 
 
                     using var scope = _services.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<EventDbContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                    db.Events.Add(evento);
+                    db.events.Add(evento);
                     await db.SaveChangesAsync();
 
-                    Console.WriteLine($"✅ Evento guardado: {evento.EventId} | Zona: {evento.Zone} | Tipo: {raw.event_type}");
+                    Console.WriteLine($"✅ Evento guardado: {evento.event_id} | Zona: {evento.zone} | Tipo: {raw.event_type}");
                 }
                 else
                 {
@@ -121,7 +120,7 @@ public class KafkaConsumer : BackgroundService
 
         using var producer = new ProducerBuilder<Null, string>(config).Build();
 
-        var json = JsonSerializer.Serialize(evento);
+        var json = System.Text.Json.JsonSerializer.Serialize(evento);
 
         var message = new Message<Null, string> { Value = json };
 
@@ -135,7 +134,7 @@ public class KafkaConsumer : BackgroundService
         const double distanceThreshold = 1.0;
 
         var eventsInSameZone = correlatedEvents
-            .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold && (e.severity== "warning" || e.severity == "critical"))
+            .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold && (e.severity == "warning" || e.severity == "critical"))
             .ToList();
 
         if (eventsInSameZone.Count >= 5)
@@ -172,23 +171,23 @@ public class KafkaConsumer : BackgroundService
                 .Where(e => DateTime.TryParse(e.timestamp, out _)) // Filtra los eventos con un timestamp válido
                 .Max(e => DateTime.Parse(e.timestamp));
 
-            Alert alert = new Alert()
+            alert alert = new alert()
             {
-                AlertId = Guid.NewGuid(),
-                CorrelationId = Guid.Parse(correlation),
-                Type = Utils.DetermineAlertType(events),
-                Score = Utils.CalculateAlertScore(events),
-                WindowStart = minTimestamp,
-                WindowEnd = maxTimestamp,
-                Evidence = events.Select(e => e.correlation_id).ToString(),
-                CreatedAt = DateTime.Now
+                alert_id = Guid.NewGuid(),
+                correlation_id = Guid.Parse(correlation),
+                type = Utils.DetermineAlertType(events),
+                score = (decimal)Utils.CalculateAlertScore(events),
+                window_start = minTimestamp.ToUniversalTime(),
+                window_end = maxTimestamp.ToUniversalTime(),
+                evidence = System.Text.Json.JsonSerializer.Serialize(events.Select(e => e.correlation_id)),
+                created_at = DateTime.Now.ToUniversalTime()
             };
             await PublishAsync(alert);
 
             using var scope = _services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<EventDbContext>();
-            db.Alerts.Add(alert);
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.alerts.Add(alert);
             await db.SaveChangesAsync();
-        }   
+        }
     }
 }

@@ -36,7 +36,7 @@ namespace EventIngestor.Controllers
             var redisKey = $"events";
 
             // Agregar el evento a la lista de Redis (usamos ListRightPush para agregar al final)
-            await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
+             await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
 
 
             // Publicar en Kafka
