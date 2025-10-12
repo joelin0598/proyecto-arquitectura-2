@@ -5,8 +5,8 @@ namespace EventIngestor.Services;
 
 public class KafkaProducer
 {
-    private readonly string _bootstrapServers = "localhost:9093"; // Puerto externo para clientes fuera del contenedor
- // IP del servidor Kafka en VLAN 10
+    private readonly string _bootstrapServers = "kafka:9092"; // Puerto externo para clientes fuera del contenedor
+                                                              // IP del servidor Kafka en VLAN 10
     private readonly string _topic = "events.standardized";
 
     public async Task PublishAsync(object evento)

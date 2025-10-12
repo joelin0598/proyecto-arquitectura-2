@@ -12,10 +12,10 @@ using EventProcessor.Services;
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
+    options.UseNpgsql("Host=db-postgres;Port=5432;Database=alertsdb;Username=appuser;Password=appsecret"));
 
 builder.Services.AddHostedService<KafkaConsumer>();
-string redisConnection = "localhost:6379"; // Asegúrate de poner la conexión correcta a tu servidor Redis
+string redisConnection = "cache-redis:6379,abortConnect=False"; // Asegúrate de poner la conexión correcta a tu servidor Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnection));
 
 var app = builder.Build();

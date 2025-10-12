@@ -28,13 +28,13 @@ public class KafkaConsumer : BackgroundService
     {
         var kafkaConfig = new ConsumerConfig
         {
-            BootstrapServers = _config["Kafka:BootstrapServers"],
+            BootstrapServers = "kafka:9092",
             GroupId = "event-processor-group",
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(kafkaConfig).Build();
-        consumer.Subscribe(_config["Kafka:Topic"]);
+        consumer.Subscribe("events.standardized");
 
         Console.WriteLine("🟢 KafkaConsumer iniciado. Escuchando eventos...");
 
@@ -115,7 +115,7 @@ public class KafkaConsumer : BackgroundService
         const string _topic = "correlated.alerts";
         var config = new ProducerConfig
         {
-            BootstrapServers = _config["Kafka:BootstrapServers"]
+            BootstrapServers = "kafka:9092"
         };
 
         using var producer = new ProducerBuilder<Null, string>(config).Build();
