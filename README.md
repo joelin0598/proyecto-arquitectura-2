@@ -20,19 +20,34 @@ Este repositorio contiene varios contenedores que representan servicios independ
    git clone https://github.com/joelin0598/proyecto-arquitectura-2.git
    cd proyecto-arquitectura-2
    ```
+2. Levantar contenedores
 
-# Levantar Contenedor individual de Server-Kafka
+- docker-compose up
 
-- Ingresar al directorio raíz del contenedor Server-Kafka dentro de la terminal
-- Ejecutar los siguientes comandos: docker-compose up -d
-- Ingresar a la terminal dentro de docker para el conetenedor de Server-Kafka
-- Entrar al modo comandos de Linux, comando wsl + Enter
-- Copiar y Ejecutar comandos para creación de topics de eventos y alertas, dentro de archivo topics.md
+3. Agregar topics
 
-## Levantar Contenedor individual de API-Event-Ingestor
+   ```bash
+   docker exec -it kafka bash
 
-- Ingresar al directorio raíz del contenedor API-Event-Ingestor dentro de la terminal
+   kafka-topics --create \
+   --topic events.standardized \
+   --bootstrap-server localhost:9092 \
+   --partitions 1 \
+   --replication-factor 1
+
+   kafka-topics --create \
+   --topic correlated.alerts \
+   --bootstrap-server localhost:9092 \
+   --partitions 1 \
+   --replication-factor 1
+   ```
+
+# Levantar Contenedor individual de Simulador
+
+- Ingresar al directorio raíz del contenedor Simulador dentro de la terminal
 - Ejecutar los siguientes comandos: docker-compose up --build
+
+# Event Ingestor
 
 ## Endpoint `http://localhost:5245/swagger/index.html`
 
@@ -41,18 +56,6 @@ Este repositorio contiene varios contenedores que representan servicios independ
 | POST   | `/events`        | Publica un evento en kafka                                 | `curl http://localhost:5245/events`               |
 | ------ | ---------------  | ---------------------------------------------------------- | ------------------------------------------------- |
 | GET    | `/events/health` | Verifica la salud del endpoint                             | `curl http://localhost:5245/events/health`        |
-
-# Levantar Contenedor individual de Simulador
-
-- Ingresar al directorio raíz del contenedor Simulador dentro de la terminal
-- Ejecutar los siguientes comandos: docker-compose up --build
-
-# Levantar Contenedor individual de Correlator
-
-- Ingresar al directorio raíz del contenedor Correlator dentro de la terminal
-- Ejecutar los siguientes comandos:
-  docker-compose build
-  docker-compose up -d
 
 # Detener los contenedores
 
