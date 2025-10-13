@@ -8,6 +8,7 @@ using StackExchange.Redis;
 using Correlator.Services;
 using Correlator.Models;
 using Correlator.Data;
+using Prometheus; // 👈 NUEVO: para metricas
 
 namespace EventProcessor.Services;
 
@@ -16,6 +17,36 @@ public class KafkaConsumer : BackgroundService
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
     private readonly IDatabase _redisDatabase;
+
+    // 👇 NUEVO: Métricas personalizadas de Prometheus
+    private static readonly Counter _alertsGenerated = Metrics
+        .CreateCounter("urbanevents_alerts_generated_total", "Total de alertas generadas",
+            new CounterConfiguration
+            {
+                LabelNames = new[] { "alert_type", "severity_level", "location" }
+            });
+
+    private static readonly Counter _eventsProcessed = Metrics
+        .CreateCounter("urbanevents_events_processed_total", "Total de eventos procesados por el correlator",
+            new CounterConfiguration
+            {
+                LabelNames = new[] { "event_type", "processing_result" }
+            });
+
+    private static readonly Histogram _alertProcessingTime = Metrics
+        .CreateHistogram("urbanevents_alert_processing_seconds", "Tiempo de procesamiento de correlación",
+            new HistogramConfiguration
+            {
+                LabelNames = new[] { "alert_type" },
+                Buckets = Histogram.ExponentialBuckets(0.01, 2, 10)
+            });
+
+    private static readonly Gauge _activeEventsInZone = Metrics
+        .CreateGauge("urbanevents_active_events_in_zone", "Eventos activos por zona para correlación",
+            new GaugeConfiguration
+            {
+                LabelNames = new[] { "zone" }
+            });
 
     public KafkaConsumer(IServiceProvider services, IConfiguration config, IConnectionMultiplexer redisConnection)
     {
@@ -45,6 +76,11 @@ public class KafkaConsumer : BackgroundService
                 var result = consumer.Consume(stoppingToken);
                 var json = result.Message.Value;
 
+                // 👇 Métrica de evento recibido
+                _eventsProcessed
+                    .WithLabels("unknown", "received")
+                    .Inc();
+
                 var raw = System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
@@ -52,16 +88,26 @@ public class KafkaConsumer : BackgroundService
 
                 if (raw is not null)
                 {
-
                     if (raw is null || raw.geo is null || raw.payload is null)
                     {
                         Console.WriteLine("⚠️ Evento inválido: faltan datos esenciales.");
-                        return;
+                        _eventsProcessed
+                            .WithLabels("unknown", "invalid")
+                            .Inc();
+                        continue;
                     }
+
+                    // 👇 Métrica de evento procesado exitosamente
+                    _eventsProcessed
+                        .WithLabels(raw.event_type ?? "unknown", "processed")
+                        .Inc();
 
                     string redisKey = "events";
 
                     var eventsList = await _redisDatabase.ListRangeAsync(redisKey);
+
+                    // 👇 Actualizar métrica de eventos activos por zona
+                    UpdateActiveEventsMetrics(eventsList, raw.geo.zone);
 
                     if (eventsList.Length > 0)
                     {
@@ -87,7 +133,6 @@ public class KafkaConsumer : BackgroundService
                         event_version = raw.event_version,
                     };
 
-
                     using var scope = _services.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -99,11 +144,17 @@ public class KafkaConsumer : BackgroundService
                 else
                 {
                     Console.WriteLine("⚠️ Evento nulo: el JSON no se pudo deserializar correctamente.");
+                    _eventsProcessed
+                        .WithLabels("unknown", "deserialization_error")
+                        .Inc();
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error al consumir evento: {ex.Message}");
+                _eventsProcessed
+                    .WithLabels("unknown", "error")
+                    .Inc();
             }
         }
 
@@ -137,20 +188,50 @@ public class KafkaConsumer : BackgroundService
             .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold && (e.severity == "warning" || e.severity == "critical"))
             .ToList();
 
-        if (eventsInSameZone.Count >= 5)
+        // 👇 Medir tiempo de procesamiento de correlación
+        using (_alertProcessingTime.WithLabels(DetermineAlertCategory(newEvent)).NewTimer())
         {
-            Console.WriteLine($"⚠️ Más de 5 eventos cercanos (distancia <= {distanceThreshold} km) generados. Generando alerta...");
-            await makeAlert(eventsInSameZone);
-        }
+            bool alertGenerated = false;
+            string alertType = "";
 
-        if (newEvent.severity == "critical")
-        {
-            Console.WriteLine($"⚠️ Evento másizo (alta severidad) detectado: {newEvent.event_type} | Generando alerta...");
-            await makeAlert(eventsInSameZone);
+            if (eventsInSameZone.Count >= 5)
+            {
+                Console.WriteLine($"⚠️ Más de 5 eventos cercanos (distancia <= {distanceThreshold} km) generados. Generando alerta...");
+                alertType = "multiple_events_cluster";
+                await makeAlert(eventsInSameZone, alertType, "high");
+                alertGenerated = true;
+            }
+
+            if (newEvent.severity == "critical")
+            {
+                Console.WriteLine($"⚠️ Evento crítico detectado: {newEvent.event_type} | Generando alerta...");
+                alertType = "critical_severity_event";
+                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical");
+                alertGenerated = true;
+            }
+
+            // 👇 Detectar tipos específicos de eventos graves
+            if (IsCriticalEventType(newEvent))
+            {
+                alertType = DetermineCriticalAlertType(newEvent);
+                Console.WriteLine($"🚨 Evento grave detectado: {alertType} | Generando alerta de emergencia...");
+                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical");
+                alertGenerated = true;
+            }
+
+            // 👇 Métrica de alerta generada
+            if (alertGenerated)
+            {
+                _alertsGenerated
+                    .WithLabels(alertType, 
+                              newEvent.severity ?? "medium", 
+                              newEvent.geo?.zone ?? "unknown")
+                    .Inc();
+            }
         }
     }
 
-    private async Task makeAlert(List<RawEventDto> events)
+    private async Task makeAlert(List<RawEventDto> events, string alertType, string severity)
     {
         if (events.Count > 0)
         {
@@ -164,18 +245,18 @@ public class KafkaConsumer : BackgroundService
                 correlation = Guid.NewGuid().ToString();
             }
             DateTime minTimestamp = events
-              .Where(e => DateTime.TryParse(e.timestamp, out _)) // Filtra los eventos con un timestamp válido
+              .Where(e => DateTime.TryParse(e.timestamp, out _))
               .Min(e => DateTime.Parse(e.timestamp));
 
             DateTime maxTimestamp = events
-                .Where(e => DateTime.TryParse(e.timestamp, out _)) // Filtra los eventos con un timestamp válido
+                .Where(e => DateTime.TryParse(e.timestamp, out _))
                 .Max(e => DateTime.Parse(e.timestamp));
 
             alert alert = new alert()
             {
                 alert_id = Guid.NewGuid(),
                 correlation_id = Guid.Parse(correlation),
-                type = Utils.DetermineAlertType(events),
+                type = alertType, // 👈 Usar el tipo específico de alerta
                 score = (decimal)Utils.CalculateAlertScore(events),
                 window_start = minTimestamp.ToUniversalTime(),
                 window_end = maxTimestamp.ToUniversalTime(),
@@ -188,6 +269,71 @@ public class KafkaConsumer : BackgroundService
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.alerts.Add(alert);
             await db.SaveChangesAsync();
+
+            Console.WriteLine($"🚨 ALERTA GENERADA: {alertType} | Severidad: {severity} | Zona: {events[0].geo?.zone}");
+        }
+    }
+
+    // 👇 NUEVO: Métodos auxiliares para clasificación de eventos graves
+    private bool IsCriticalEventType(RawEventDto eventData)
+    {
+        var criticalTypes = new[] { "fire", "incendio", "accident", "accidente", "shooting", "disparo", "explosion", "explosión", "earthquake", "terremoto" };
+        return criticalTypes.Any(type => 
+            (eventData.event_type?.ToLower().Contains(type) == true) ||
+            (eventData.payload?.ToString()?.ToLower().Contains(type) == true));
+    }
+
+    private string DetermineCriticalAlertType(RawEventDto eventData)
+    {
+        var eventType = eventData.event_type?.ToLower() ?? "";
+        var payload = eventData.payload?.ToString()?.ToLower() ?? "";
+
+        if (eventType.Contains("fire") || payload.Contains("fire") || eventType.Contains("incendio"))
+            return "fire_emergency";
+        if (eventType.Contains("accident") || payload.Contains("accident") || eventType.Contains("accidente"))
+            return "traffic_accident";
+        if (eventType.Contains("shooting") || payload.Contains("shooting") || eventType.Contains("disparo"))
+            return "shooting_incident";
+        if (eventType.Contains("explosion") || payload.Contains("explosion") || eventType.Contains("explosión"))
+            return "explosion_emergency";
+        if (eventType.Contains("earthquake") || payload.Contains("earthquake") || eventType.Contains("terremoto"))
+            return "earthquake_alert";
+
+        return "critical_incident";
+    }
+
+    private string DetermineAlertCategory(RawEventDto eventData)
+    {
+        if (IsCriticalEventType(eventData))
+            return "critical_emergency";
+        if (eventData.severity == "critical")
+            return "high_severity";
+        return "general_alert";
+    }
+
+    private void UpdateActiveEventsMetrics(StackExchange.Redis.RedisValue[] eventsList, string zone)
+    {
+        try
+        {
+            var eventsInZone = eventsList
+                .Where(x => !x.IsNullOrEmpty)
+                .Select(x => {
+                    try {
+                        return System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x);
+                    } catch {
+                        return null;
+                    }
+                })
+                .Where(x => x != null && x.geo?.zone == zone)
+                .Count();
+
+            _activeEventsInZone
+                .WithLabels(zone ?? "unknown")
+                .Set(eventsInZone);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error actualizando métricas de eventos activos: {ex.Message}");
         }
     }
 }
