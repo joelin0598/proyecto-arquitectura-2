@@ -5,25 +5,29 @@ using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using Correlator.Data;
 using EventProcessor.Services;
-using Prometheus; // 👈 Nuevo
+using Prometheus; // 👈 Para métricas
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// 👇 Configurar métricas para el Correlator
+// ✅ Configurar métricas Prometheus
 builder.Services.AddHealthChecks();
-builder.Services.AddMetricServer(options =>
-{
-    options.Port = 5246; // 👈 Puerto diferente para métricas del Correlator
-});
 
+// ✅ Base de datos Postgres
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql("Host=db-postgres;Port=5432;Database=alertsdb;Username=appuser;Password=appsecret"));
 
+// ✅ Servicio Kafka
 builder.Services.AddHostedService<KafkaConsumer>();
+
+// ✅ Conexión Redis
 string redisConnection = "cache-redis:6379,abortConnect=False";
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnection));
 
 var app = builder.Build();
+
+// ✅ Iniciar servidor de métricas Prometheus en el puerto 5246
+var metricServer = new KestrelMetricServer(port: 5246);
+metricServer.Start();
 
 using (var scope = app.Services.CreateScope())
 {

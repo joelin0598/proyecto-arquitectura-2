@@ -1,37 +1,28 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 5s  # Cada cuánto Prometheus recopila métricas
 
 scrape_configs:
-  - job_name: 'prometheus'
+  # Prometheus se monitorea a sí mismo
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
 
-  - job_name: 'event-ingestor'
+  # Event Ingestor (puerto 5245, tu microservicio .NET principal)
+  - job_name: "event_ingestor"
     static_configs:
-      - targets: ['event-ingestor:5245']
-    metrics_path: /metrics
-    scrape_interval: 10s
+      - targets: ["event-ingestor:5245"]
 
-  - job_name: 'correlator'
+  # Correlator (puerto 5246 — usa KestrelMetricServer)
+  - job_name: "correlator"
     static_configs:
-      - targets: ['correlator:5246']
-    metrics_path: /metrics
-    scrape_interval: 10s
+      - targets: ["correlator:5246"]
 
-  - job_name: 'node-exporter'
+  # PostgreSQL Exporter 
+  - job_name: "postgres_exporter"
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ["postgres-exporter:9187"]
 
-  - job_name: 'cadvisor'
+  # Redis Exporter
+  - job_name: "redis_exporter"
     static_configs:
-      - targets: ['cadvisor:8080']
-    scrape_interval: 15s
-
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres:5432']
+      - targets: ["redis-exporter:9121"]
