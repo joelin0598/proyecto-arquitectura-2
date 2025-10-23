@@ -102,7 +102,7 @@ public class KafkaConsumer : BackgroundService
                         .WithLabels(raw.event_type ?? "unknown", "processed")
                         .Inc();
 
-                    string redisKey = "events";
+                    string redisKey = $"events_{raw.geo.zone}";
 
                     var eventsList = await _redisDatabase.ListRangeAsync(redisKey);
 
@@ -112,6 +112,13 @@ public class KafkaConsumer : BackgroundService
                     if (eventsList.Length > 0)
                     {
                         List<RawEventDto> correlatedEvents = eventsList.Select(x => System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
+                        
+                        DateTime fiveMinutesAgo = DateTime.UtcNow.AddMinutes(-5);
+                        correlatedEvents = correlatedEvents.Where(x => DateTime.TryParse(x.timestamp, out DateTime timestamp) && timestamp >= fiveMinutesAgo).ToList();
+                        await _redisDatabase.KeyDeleteAsync(redisKey);
+                        var listSerialize = correlatedEvents.Select(x => JsonSerializer.Serialize(x));
+                        await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
+
                         await CorrelateEventsByDistance(correlatedEvents, raw);
                     }
 
@@ -182,9 +189,8 @@ public class KafkaConsumer : BackgroundService
 
     private async Task CorrelateEventsByDistance(List<RawEventDto> correlatedEvents, RawEventDto newEvent)
     {
-        const double distanceThreshold = 1.0;
-
-        var eventsInSameZone = correlatedEvents
+        const double distanceThreshold = 5.0;
+        List<RawEventDto> eventsInSameZone = correlatedEvents
             .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold && (e.severity == "warning" || e.severity == "critical"))
             .ToList();
 

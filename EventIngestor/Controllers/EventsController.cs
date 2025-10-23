@@ -38,7 +38,7 @@ namespace EventIngestor.Controllers
         public async Task<IActionResult> IngestEvent([FromBody] CanonicalEvent evento)
         {
             // 👇 NUEVO: Medir tiempo de procesamiento
-            using (_eventProcessingTime.WithLabels(evento.type ?? "unknown").NewTimer())
+            using (_eventProcessingTime.WithLabels(evento.event_type ?? "unknown").NewTimer())
             {
                 try
                 {
@@ -56,7 +56,7 @@ namespace EventIngestor.Controllers
                     var jsonEvento = JsonSerializer.Serialize(evento);
 
                     // Usamos correlation_id como la clave para la lista de Redis
-                    var redisKey = $"events";
+                    var redisKey = $"events_{evento.geo.zone}";
 
                     // Agregar el evento a la lista de Redis (usamos ListRightPush para agregar al final)
                     await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
@@ -69,7 +69,7 @@ namespace EventIngestor.Controllers
                         
                         // 👇 NUEVO: Métrica de evento exitoso
                         _eventsReceived
-                            .WithLabels(evento.type ?? "unknown", 
+                            .WithLabels(evento.event_type?? "unknown", 
                                       evento.geo?.zone ?? "unknown", 
                                       "success")
                             .Inc();
@@ -78,7 +78,7 @@ namespace EventIngestor.Controllers
                     {
                         // 👇 NUEVO: Métrica de evento con error en Kafka
                         _eventsReceived
-                            .WithLabels(evento.type ?? "unknown", 
+                            .WithLabels(evento.event_type ?? "unknown", 
                                       evento.geo?.zone ?? "unknown", 
                                       "kafka_error")
                             .Inc();
@@ -92,7 +92,7 @@ namespace EventIngestor.Controllers
                 {
                     // 👇 NUEVO: Métrica de error general
                     _eventsReceived
-                        .WithLabels(evento.type ?? "unknown", 
+                        .WithLabels(evento.event_type ?? "unknown", 
                                   evento.geo?.zone ?? "unknown", 
                                   "error")
                         .Inc();

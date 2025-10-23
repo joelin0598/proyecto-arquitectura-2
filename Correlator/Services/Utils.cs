@@ -81,7 +81,7 @@ namespace Correlator.Services
                 }
                 else if (e.severity == "info")
                 {
-                    severityScore += 0.3;
+                    severityScore += 0.1;
                 }
             }
 

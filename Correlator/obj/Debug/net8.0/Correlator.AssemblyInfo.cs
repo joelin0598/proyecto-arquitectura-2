@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Correlator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa462a0062c3b5ae1618966d748c292b863d9070")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f339f2b4488c3e2c6aaed6823386d8f75ff7621a")]
 [assembly: System.Reflection.AssemblyProductAttribute("Correlator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Correlator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

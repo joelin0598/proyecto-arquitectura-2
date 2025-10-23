@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj": {}
+    "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj": {}
   },
   "projects": {
-    "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj": {
+    "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj",
+        "projectUniqueName": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
         "projectName": "EventIngestor",
-        "projectPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\EventIngestor.csproj",
+        "projectPath": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\EventIngestor\\EventIngestor.csproj",
         "packagesPath": "C:\\Users\\gbval\\.nuget\\packages\\",
-        "outputPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\EventIngestor\\obj\\",
+        "outputPath": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\EventIngestor\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Programas\\Visual Studio Shared\\NuGetPackages"
@@ -82,6 +82,14 @@
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.6.2, )"
+            },
+            "prometheus-net.AspNetCore": {
+              "target": "Package",
+              "version": "[8.2.1, )"
+            },
+            "prometheus-net.AspNetCore.HealthChecks": {
+              "target": "Package",
+              "version": "[8.2.1, )"
             }
           },
           "imports": [

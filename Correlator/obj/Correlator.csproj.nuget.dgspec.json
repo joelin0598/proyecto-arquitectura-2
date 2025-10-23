@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\Correlator.csproj": {}
+    "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj": {}
   },
   "projects": {
-    "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\Correlator.csproj": {
+    "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\Correlator.csproj",
+        "projectUniqueName": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj",
         "projectName": "Correlator",
-        "projectPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\Correlator.csproj",
+        "projectPath": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj",
         "packagesPath": "C:\\Users\\gbval\\.nuget\\packages\\",
-        "outputPath": "D:\\Downloads\\ProyectoArqui (1)\\ProyectoArqui\\Correlator\\obj\\",
+        "outputPath": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Programas\\Visual Studio Shared\\NuGetPackages"
@@ -67,13 +67,33 @@
               "target": "Package",
               "version": "[9.0.9, )"
             },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.4, )"
+            },
+            "Newtonsoft.Json.Bson": {
+              "target": "Package",
+              "version": "[1.0.3, )"
+            },
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
               "version": "[9.0.4, )"
             },
+            "Pomelo.EntityFrameworkCore.MySql": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
             "StackExchange.Redis": {
               "target": "Package",
               "version": "[2.9.25, )"
+            },
+            "prometheus-net": {
+              "target": "Package",
+              "version": "[8.2.1, )"
+            },
+            "prometheus-net.AspNetCore": {
+              "target": "Package",
+              "version": "[8.2.1, )"
             }
           },
           "imports": [
