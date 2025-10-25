@@ -8,7 +8,7 @@ using StackExchange.Redis;
 using Correlator.Services;
 using Correlator.Models;
 using Correlator.Data;
-using Prometheus; // 👈 NUEVO: para metricas
+using Prometheus;
 
 namespace EventProcessor.Services;
 
@@ -18,7 +18,7 @@ public class KafkaConsumer : BackgroundService
     private readonly IConfiguration _config;
     private readonly IDatabase _redisDatabase;
 
-    // 👇 NUEVO: Métricas personalizadas de Prometheus
+    // 👇 MÉTRICAS Prometheus
     private static readonly Counter _alertsGenerated = Metrics
         .CreateCounter("urbanevents_alerts_generated_total", "Total de alertas generadas",
             new CounterConfiguration
@@ -46,6 +46,14 @@ public class KafkaConsumer : BackgroundService
             new GaugeConfiguration
             {
                 LabelNames = new[] { "zone" }
+            });
+
+    // 👇 NUEVA MÉTRICA PARA ALERTAS ACTIVAS
+    private static readonly Gauge _activeAlerts = Metrics
+        .CreateGauge("urbanevents_active_alerts", "Alertas activas recientes",
+            new GaugeConfiguration
+            {
+                LabelNames = new[] { "alert_id", "type", "zone", "score" }
             });
 
     public KafkaConsumer(IServiceProvider services, IConfiguration config, IConnectionMultiplexer redisConnection)
@@ -88,7 +96,7 @@ public class KafkaConsumer : BackgroundService
 
                 if (raw is not null)
                 {
-                    if (raw is null || raw.geo is null || raw.payload is null)
+                    if (raw.geo is null || raw.payload is null)
                     {
                         Console.WriteLine("⚠️ Evento inválido: faltan datos esenciales.");
                         _eventsProcessed
@@ -111,17 +119,39 @@ public class KafkaConsumer : BackgroundService
 
                     if (eventsList.Length > 0)
                     {
-                        List<RawEventDto> correlatedEvents = eventsList.Select(x => System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
-                        
+                        List<RawEventDto> correlatedEvents = eventsList
+                            .Where(x => !x.IsNullOrEmpty)
+                            .Select(x => 
+                            {
+                                try 
+                                { 
+                                    return System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x); 
+                                } 
+                                catch 
+                                { 
+                                    return null; 
+                                }
+                            })
+                            .Where(x => x != null)
+                            .ToList();
+
                         DateTime fiveMinutesAgo = DateTime.UtcNow.AddMinutes(-5);
-                        correlatedEvents = correlatedEvents.Where(x => DateTime.TryParse(x.timestamp, out DateTime timestamp) && timestamp >= fiveMinutesAgo).ToList();
+                        correlatedEvents = correlatedEvents
+                            .Where(x => DateTime.TryParse(x.timestamp, out DateTime timestamp) && timestamp >= fiveMinutesAgo)
+                            .ToList();
+
+                        // Limpiar y reconstruir la lista en Redis
                         await _redisDatabase.KeyDeleteAsync(redisKey);
-                        var listSerialize = correlatedEvents.Select(x => JsonSerializer.Serialize(x));
-                        await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
+                        if (correlatedEvents.Count > 0)
+                        {
+                            var listSerialize = correlatedEvents.Select(x => JsonSerializer.Serialize(x));
+                            await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
+                        }
 
                         await CorrelateEventsByDistance(correlatedEvents, raw);
                     }
 
+                    // Guardar evento en PostgreSQL
                     var evento = new _event
                     {
                         event_id = Guid.NewGuid(),
@@ -131,7 +161,7 @@ public class KafkaConsumer : BackgroundService
                         correlation_id = Guid.Parse(raw.correlation_id),
                         trace_id = Guid.Parse(raw.trace_id),
                         partition_key = raw.partition_key,
-                        ts_utc = DateTime.Now.ToUniversalTime(),
+                        ts_utc = DateTime.UtcNow,
                         zone = raw.geo.zone,
                         geo_lat = (decimal)raw.geo.lat,
                         geo_lon = (decimal)raw.geo.lon,
@@ -142,7 +172,6 @@ public class KafkaConsumer : BackgroundService
 
                     using var scope = _services.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
                     db.events.Add(evento);
                     await db.SaveChangesAsync();
 
@@ -190,8 +219,11 @@ public class KafkaConsumer : BackgroundService
     private async Task CorrelateEventsByDistance(List<RawEventDto> correlatedEvents, RawEventDto newEvent)
     {
         const double distanceThreshold = 5.0;
+        
+        // Filtrar eventos en la misma zona y con severidad adecuada
         List<RawEventDto> eventsInSameZone = correlatedEvents
-            .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold && (e.severity == "warning" || e.severity == "critical"))
+            .Where(e => GeoService.Haversine(e.geo?.lat ?? 0, e.geo?.lon ?? 0, newEvent.geo?.lat ?? 0, newEvent.geo?.lon ?? 0) <= distanceThreshold 
+                     && (e.severity == "warning" || e.severity == "critical"))
             .ToList();
 
         // 👇 Medir tiempo de procesamiento de correlación
@@ -200,6 +232,7 @@ public class KafkaConsumer : BackgroundService
             bool alertGenerated = false;
             string alertType = "";
 
+            // Detectar clúster de eventos
             if (eventsInSameZone.Count >= 5)
             {
                 Console.WriteLine($"⚠️ Más de 5 eventos cercanos (distancia <= {distanceThreshold} km) generados. Generando alerta...");
@@ -208,6 +241,7 @@ public class KafkaConsumer : BackgroundService
                 alertGenerated = true;
             }
 
+            // Detectar eventos críticos individuales
             if (newEvent.severity == "critical")
             {
                 Console.WriteLine($"⚠️ Evento crítico detectado: {newEvent.event_type} | Generando alerta...");
@@ -237,7 +271,7 @@ public class KafkaConsumer : BackgroundService
         }
     }
 
-    private async Task makeAlert(List<RawEventDto> events, string alertType, string severity, List<RawEventDto> rawEventDtos)
+    private async Task makeAlert(List<RawEventDto> events, string alertType, string severity, List<RawEventDto> allEventsInZone)
     {
         if (events.Count > 0)
         {
@@ -250,33 +284,51 @@ public class KafkaConsumer : BackgroundService
             {
                 correlation = Guid.NewGuid().ToString();
             }
+
+            // Calcular ventana temporal
             DateTime minTimestamp = events
-              .Where(e => DateTime.TryParse(e.timestamp, out _))
-              .Min(e => DateTime.Parse(e.timestamp));
+                .Where(e => DateTime.TryParse(e.timestamp, out _))
+                .Min(e => DateTime.Parse(e.timestamp));
 
             DateTime maxTimestamp = events
                 .Where(e => DateTime.TryParse(e.timestamp, out _))
                 .Max(e => DateTime.Parse(e.timestamp));
 
+            // Limpiar eventos procesados de Redis
             string redisKey = $"events_{events[0].geo.zone}";
-            await _redisDatabase.KeyDeleteAsync(redisKey);
-            rawEventDtos.RemoveAll(rawEvent => events.Contains(rawEvent));
-            var listSerialize = rawEventDtos.Select(x => JsonSerializer.Serialize(x));
+            var remainingEvents = allEventsInZone.Except(events).ToList();
             
-            await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
+            await _redisDatabase.KeyDeleteAsync(redisKey);
+            if (remainingEvents.Count > 0)
+            {
+                var listSerialize = remainingEvents.Select(x => JsonSerializer.Serialize(x));
+                await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
+            }
 
+            // Crear alerta
             alert alert = new alert()
             {
                 alert_id = Guid.NewGuid(),
                 correlation_id = Guid.Parse(correlation),
-                type = alertType, // 👈 Usar el tipo específico de alerta
+                type = alertType,
                 score = (decimal)Utils.CalculateAlertScore(events),
                 window_start = minTimestamp.ToUniversalTime(),
                 window_end = maxTimestamp.ToUniversalTime(),
                 evidence = System.Text.Json.JsonSerializer.Serialize(events.Select(e => e.correlation_id)),
-                created_at = DateTime.Now.ToUniversalTime(),
-                zone = events[0].geo.zone 
+                created_at = DateTime.UtcNow,
+                zone = events[0].geo?.zone
             };
+
+            // 👇 REGISTRAR COMO MÉTRICA ACTIVA
+            _activeAlerts
+                .WithLabels(
+                    alert.alert_id.ToString(),
+                    alert.type,
+                    alert.zone ?? "unknown",
+                    alert.score?.ToString("F2") ?? "0")
+                .Set(1);  // 1 = activa
+
+            // Publicar en Kafka y guardar en DB
             await PublishAsync(alert);
 
             using var scope = _services.CreateScope();
@@ -284,11 +336,11 @@ public class KafkaConsumer : BackgroundService
             db.alerts.Add(alert);
             await db.SaveChangesAsync();
 
-            Console.WriteLine($"🚨 ALERTA GENERADA: {alertType} | Severidad: {severity} | Zona: {events[0].geo?.zone}");
+            Console.WriteLine($"🚨 ALERTA GENERADA: {alertType} | Severidad: {severity} | Zona: {events[0].geo?.zone} | Score: {alert.score:F2}");
         }
     }
 
-    // 👇 NUEVO: Métodos auxiliares para clasificación de eventos graves
+    // 👇 Métodos auxiliares para clasificación de eventos graves
     private bool IsCriticalEventType(RawEventDto eventData)
     {
         var criticalTypes = new[] { "fire", "incendio", "accident", "accidente", "shooting", "disparo", "explosion", "explosión", "earthquake", "terremoto" };

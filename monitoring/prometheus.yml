@@ -1,28 +1,48 @@
 global:
-  scrape_interval: 5s  # Cada cuánto Prometheus recopila métricas
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
 scrape_configs:
-  # Prometheus se monitorea a sí mismo
+  # Prometheus self-monitoring - FILTRADO
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(go_|process_|prometheus_|scrape_).*'
+        action: drop
 
-  # Event Ingestor (puerto 5245, tu microservicio .NET principal)
+  # Event Ingestor - SOLO métricas urbanevents
   - job_name: "event_ingestor"
     static_configs:
       - targets: ["event-ingestor:5245"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'urbanevents_.*'
+        action: keep  # ✅ MANTIENE solo las que coinciden
 
-  # Correlator (puerto 5246 — usa KestrelMetricServer)
+  # Correlator - SOLO métricas urbanevents  
   - job_name: "correlator"
     static_configs:
       - targets: ["correlator:5246"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'urbanevents_.*'
+        action: keep  # ✅ MANTIENE solo las que coinciden
 
-  # PostgreSQL Exporter 
+  # Si tienes exporters, también filtrarlos
   - job_name: "postgres_exporter"
     static_configs:
       - targets: ["postgres-exporter:9187"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(pg_|postgres_).*'
+        action: keep
 
-  # Redis Exporter
-  - job_name: "redis_exporter"
+  - job_name: "redis_exporter" 
     static_configs:
       - targets: ["redis-exporter:9121"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(redis_|db_).*'
+        action: keep
