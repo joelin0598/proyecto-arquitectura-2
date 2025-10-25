@@ -23,6 +23,7 @@ Cada módulo corre como un contenedor independiente:
 
 - Docker
 - Docker Compose
+- Git
 
 ## 🚀 Ejecución del sistema
 

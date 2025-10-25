@@ -13,12 +13,16 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-appsecret}
       POSTGRES_DB: ${POSTGRES_DB:-alertsdb}
     ports:
-      - "5432:5432"
+      - "5544:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,7 +41,7 @@ services:
       postgres:
         condition: service_healthy
     networks: [labnet]
-  
+
   # ----------------------- Kafka y Kafka UI -----------------------
 
   kafka:
@@ -68,7 +72,11 @@ services:
     volumes:
       - kafkadata:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/usr/bin/kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "/usr/bin/kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -131,10 +139,10 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
     depends_on:
       event-ingestor:
         condition: service_healthy
@@ -153,10 +161,10 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
     networks: [labnet]
 
   cadvisor:
@@ -221,7 +229,11 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9200 >/dev/null 2>&1 || curl -fsS http://localhost:9200 >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:9200 >/dev/null 2>&1 || curl -fsS http://localhost:9200 >/dev/null 2>&1 || exit 1",
+        ]
       interval: 20s
       timeout: 10s
       retries: 40
@@ -385,7 +397,7 @@ services:
     networks: [labnet]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5245/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5245/events/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -14,7 +14,8 @@ builder.Services.AddHealthChecks();
 
 // ✅ Base de datos Postgres
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql("Host=db-postgres;Port=5432;Database=alertsdb;Username=appuser;Password=appsecret"));
+    //options.UseNpgsql("Host=db-postgres;Port=5432;Database=alertsdb;Username=appuser;Password=appsecret"));
+    options.UseNpgsql("Host=arqui-pg.postgres.database.azure.com;Port=5432;Database=test_events;Username=grupo1;Password=4rqu1.4pp"));
 
 // ✅ Servicio Kafka
 builder.Services.AddHostedService<KafkaConsumer>();

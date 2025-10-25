@@ -1,6 +1,6 @@
-# Consulte https://aka.ms/customizecontainer para aprender a personalizar su contenedor de depuración y cómo Visual Studio usa este Dockerfile para compilar sus imágenes para una depuración más rápida.
+# Consulte https://aka.ms/customizecontainer para aprender a personalizar su contenedor de depuraciï¿½n y cï¿½mo Visual Studio usa este Dockerfile para compilar sus imï¿½genes para una depuraciï¿½n mï¿½s rï¿½pida.
 
-# Esta fase se usa cuando se ejecuta desde VS en modo rápido (valor predeterminado para la configuración de depuración)
+# Esta fase se usa cuando se ejecuta desde VS en modo rï¿½pido (valor predeterminado para la configuraciï¿½n de depuraciï¿½n)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 USER $APP_UID
 WORKDIR /app
@@ -17,13 +17,15 @@ COPY . .
 WORKDIR "/src/."
 RUN dotnet build "./EventIngestor.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Esta fase se usa para publicar el proyecto de servicio que se copiará en la fase final.
+# Esta fase se usa para publicar el proyecto de servicio que se copiarï¿½ en la fase final.
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./EventIngestor.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Esta fase se usa en producción o cuando se ejecuta desde VS en modo normal (valor predeterminado cuando no se usa la configuración de depuración)
+# Esta fase se usa en producciï¿½n o cuando se ejecuta desde VS en modo normal (valor predeterminado cuando no se usa la configuraciï¿½n de depuraciï¿½n)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "EventIngestor.dll"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl --fail http://localhost:5245/events/health || exit 1
