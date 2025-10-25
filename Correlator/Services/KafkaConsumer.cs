@@ -204,7 +204,7 @@ public class KafkaConsumer : BackgroundService
             {
                 Console.WriteLine($"⚠️ Más de 5 eventos cercanos (distancia <= {distanceThreshold} km) generados. Generando alerta...");
                 alertType = "multiple_events_cluster";
-                await makeAlert(eventsInSameZone, alertType, "high");
+                await makeAlert(eventsInSameZone, alertType, "high", correlatedEvents);
                 alertGenerated = true;
             }
 
@@ -212,7 +212,7 @@ public class KafkaConsumer : BackgroundService
             {
                 Console.WriteLine($"⚠️ Evento crítico detectado: {newEvent.event_type} | Generando alerta...");
                 alertType = "critical_severity_event";
-                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical");
+                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical", correlatedEvents);
                 alertGenerated = true;
             }
 
@@ -221,7 +221,7 @@ public class KafkaConsumer : BackgroundService
             {
                 alertType = DetermineCriticalAlertType(newEvent);
                 Console.WriteLine($"🚨 Evento grave detectado: {alertType} | Generando alerta de emergencia...");
-                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical");
+                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical", correlatedEvents);
                 alertGenerated = true;
             }
 
@@ -237,7 +237,7 @@ public class KafkaConsumer : BackgroundService
         }
     }
 
-    private async Task makeAlert(List<RawEventDto> events, string alertType, string severity)
+    private async Task makeAlert(List<RawEventDto> events, string alertType, string severity, List<RawEventDto> rawEventDtos)
     {
         if (events.Count > 0)
         {
@@ -258,6 +258,13 @@ public class KafkaConsumer : BackgroundService
                 .Where(e => DateTime.TryParse(e.timestamp, out _))
                 .Max(e => DateTime.Parse(e.timestamp));
 
+            string redisKey = $"events_{events[0].geo.zone}";
+            await _redisDatabase.KeyDeleteAsync(redisKey);
+            rawEventDtos.RemoveAll(rawEvent => events.Contains(rawEvent));
+            var listSerialize = rawEventDtos.Select(x => JsonSerializer.Serialize(x));
+            
+            await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
+
             alert alert = new alert()
             {
                 alert_id = Guid.NewGuid(),
@@ -267,7 +274,8 @@ public class KafkaConsumer : BackgroundService
                 window_start = minTimestamp.ToUniversalTime(),
                 window_end = maxTimestamp.ToUniversalTime(),
                 evidence = System.Text.Json.JsonSerializer.Serialize(events.Select(e => e.correlation_id)),
-                created_at = DateTime.Now.ToUniversalTime()
+                created_at = DateTime.Now.ToUniversalTime(),
+                zone = events[0].geo.zone 
             };
             await PublishAsync(alert);
 
