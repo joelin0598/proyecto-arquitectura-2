@@ -21,8 +21,12 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<alert> alerts { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=db-postgres;Port=5432;Database=alertsdb;Username=appuser;Password=appsecret;");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseNpgsql("Host=db-postgres;Port=5432;Database=alertsdb;Username=appuser;Password=appsecret;");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +44,8 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.event_id).ValueGeneratedNever();
             entity.Property(e => e.payload).HasColumnType("jsonb");
+            entity.Property(e => e.geo_lon).HasColumnName("geo_long");
+
         });
 
         modelBuilder.Entity<alert>(entity =>
