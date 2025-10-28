@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "k+azzZKOVs4XStsYr+UxJJWHlHWSyLCISEuCzYObnKM=",
+  "Source": "EventIngestor",
+  "BasePath": "_content/EventIngestor",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

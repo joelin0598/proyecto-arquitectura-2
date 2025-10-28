@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 5s # Cada cuánto Prometheus recopila métricas
+
+scrape_configs:
+  # Prometheus se monitorea a sí mismo
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Event Ingestor (.NET microservicio principal)
+  - job_name: "event_ingestor"
+    static_configs:
+      - targets: ["event-ingestor:5245"]
+
+  # Correlator (.NET microservicio secundario)
+  - job_name: "correlator"
+    static_configs:
+      - targets: ["correlator:5246"]
+
+  # PostgreSQL Exporter
+  - job_name: "postgres_exporter"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Redis Exporter
+  - job_name: "redis_exporter"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # Node Exporter (métricas del host)
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # cAdvisor (métricas de contenedores Docker)
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # Elasticsearch Exporter
+  - job_name: "elasticsearch"
+    static_configs:
+      - targets: ["elasticsearch-exporter:9114"]

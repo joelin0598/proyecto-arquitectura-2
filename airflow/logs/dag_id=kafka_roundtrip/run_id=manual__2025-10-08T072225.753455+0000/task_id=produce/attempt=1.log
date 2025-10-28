@@ -1,0 +1,21 @@
+[2025-10-08T07:22:26.886+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2025-10-08T07:22:26.908+0000] {taskinstance.py:2612} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: kafka_roundtrip.produce manual__2025-10-08T07:22:25.753455+00:00 [queued]>
+[2025-10-08T07:22:26.917+0000] {taskinstance.py:2612} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: kafka_roundtrip.produce manual__2025-10-08T07:22:25.753455+00:00 [queued]>
+[2025-10-08T07:22:26.918+0000] {taskinstance.py:2865} INFO - Starting attempt 1 of 1
+[2025-10-08T07:22:26.933+0000] {taskinstance.py:2888} INFO - Executing <Task(_PythonDecoratedOperator): produce> on 2025-10-08 07:22:25.753455+00:00
+[2025-10-08T07:22:26.940+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:70: DeprecationWarning: This process (pid=148) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-10-08T07:22:26.941+0000] {standard_task_runner.py:72} INFO - Started process 155 to run task
+[2025-10-08T07:22:26.941+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'kafka_roundtrip', 'produce', 'manual__2025-10-08T07:22:25.753455+00:00', '--job-id', '20', '--raw', '--subdir', 'DAGS_FOLDER/kafka_roundtrip.py', '--cfg-path', '/tmp/tmp5id7dz1k']
+[2025-10-08T07:22:26.942+0000] {standard_task_runner.py:105} INFO - Job 20: Subtask produce
+[2025-10-08T07:22:26.995+0000] {task_command.py:467} INFO - Running <TaskInstance: kafka_roundtrip.produce manual__2025-10-08T07:22:25.753455+00:00 [running]> on host b2115f5660aa
+[2025-10-08T07:22:27.091+0000] {taskinstance.py:3131} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='kafka_roundtrip' AIRFLOW_CTX_TASK_ID='produce' AIRFLOW_CTX_EXECUTION_DATE='2025-10-08T07:22:25.753455+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-08T07:22:25.753455+00:00'
+[2025-10-08T07:22:27.092+0000] {taskinstance.py:731} INFO - ::endgroup::
+[2025-10-08T07:22:27.111+0000] {logging_mixin.py:190} INFO - Enviado: hola-desde-***-3b7bd6d4-4c04-4710-a478-fe29fe09156d
+[2025-10-08T07:22:27.111+0000] {python.py:240} INFO - Done. Returned value was: None
+[2025-10-08T07:22:27.124+0000] {taskinstance.py:340} INFO - ::group::Post task execution logs
+[2025-10-08T07:22:27.125+0000] {taskinstance.py:352} INFO - Marking task as SUCCESS. dag_id=kafka_roundtrip, task_id=produce, run_id=manual__2025-10-08T07:22:25.753455+00:00, execution_date=20251008T072225, start_date=20251008T072226, end_date=20251008T072227
+[2025-10-08T07:22:27.158+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 0
+[2025-10-08T07:22:27.182+0000] {taskinstance.py:3900} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-10-08T07:22:27.185+0000] {local_task_job_runner.py:245} INFO - ::endgroup::

@@ -1,0 +1,112 @@
+{
+  "dashboard": {
+    "title": "Mapa de Calor por Zona",
+    "description": "Recuento de event_type por zona a lo largo del tiempo",
+    "tags": ["heatmap", "events", "zones"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Mapa de Calor por Zona",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "sum by (location, event_type) (rate(urbanevents_events_received_total{status=\"success\"}[5m]))",
+            "legendFormat": "{{location}} - {{event_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "scheme",
+              "scheme": "oranges"
+            },
+            "custom": {
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 80,
+              "gradientMode": "hue",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              }
+            }
+          }
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "options": {
+          "color": {
+            "exponent": 0.5,
+            "mode": "opacity",
+            "scale": "linear",
+            "scheme": "Oranges",
+            "steps": 64
+          },
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "yAxis": {
+            "axisPlacement": "auto",
+            "axisWidth": 40,
+            "decimals": 0,
+            "reverse": false
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Top Zonas con Más Actividad",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "topk(5, sum by (location) (urbanevents_events_received_total{status=\"success\"}))",
+            "legendFormat": "{{location}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 10
+        }
+      },
+      {
+        "id": 3,
+        "title": "Distribución de Tipos de Evento",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "sum by (event_type) (urbanevents_events_received_total{status=\"success\"})",
+            "legendFormat": "{{event_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 10
+        }
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "uid": "event-heatmap-by-zone"
+  }
+}
