@@ -11,6 +11,7 @@ using Correlator.Data;
 using Prometheus;
 using Metrics = Prometheus.Metrics; // 👈 Esto desambiguará el uso
 using Nest;
+using Microsoft.Extensions.Logging;
 
 
 
@@ -220,28 +221,22 @@ public class KafkaConsumer : BackgroundService
 
             if (eventsInSameZone.Count >= 5)
             {
+                alertType = Utils.DetermineAlertType(eventsInSameZone);
+
                 Console.WriteLine($"⚠️ Más de 5 eventos cercanos (distancia <= {distanceThreshold} km) generados. Generando alerta...");
                 alertType = "multiple_events_cluster";
-                await makeAlert(eventsInSameZone, alertType, "high", correlatedEvents);
+                await makeAlert(eventsInSameZone,alertType, "high", correlatedEvents);
                 alertGenerated = true;
             }
 
-            if (newEvent.severity == "critical")
+            if (newEvent.severity == "critical" || newEvent.severity == "warning")
             {
                 Console.WriteLine($"⚠️ Evento crítico detectado: {newEvent.event_type} | Generando alerta...");
-                alertType = "critical_severity_event";
-                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical", correlatedEvents);
+                alertType = Utils.DetermineAlertType(eventsInSameZone);
+                await makeAlert(new List<RawEventDto> { newEvent },alertType,"hight", correlatedEvents);
                 alertGenerated = true;
             }
 
-            // 👇 Detectar tipos específicos de eventos graves
-            if (IsCriticalEventType(newEvent))
-            {
-                alertType = DetermineCriticalAlertType(newEvent);
-                Console.WriteLine($"🚨 Evento grave detectado: {alertType} | Generando alerta de emergencia...");
-                await makeAlert(new List<RawEventDto> { newEvent }, alertType, "critical", correlatedEvents);
-                alertGenerated = true;
-            }
 
             // 👇 Métrica de alerta generada
             if (alertGenerated)
@@ -255,7 +250,7 @@ public class KafkaConsumer : BackgroundService
         }
     }
 
-    private async Task makeAlert(List<RawEventDto> events, string severity, List<RawEventDto> rawEventDtos)
+    private async Task makeAlert(List<RawEventDto> events, string alertType,string severity, List<RawEventDto> rawEventDtos)
     {
         if (events.Count > 0)
         {
@@ -282,12 +277,11 @@ public class KafkaConsumer : BackgroundService
             var listSerialize = rawEventDtos.Select(x => JsonSerializer.Serialize(x));
             
             await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
-
             alert alert = new alert()
             {
                 alert_id = Guid.NewGuid(),
                 correlation_id = Guid.Parse(correlation),
-                type = Utils.DetermineAlertType(events), // 👈 Usar el tipo específico de alerta
+                type = alertType, // 👈 Usar el tipo específico de alerta
                 score = (decimal)Utils.CalculateAlertScore(events),
                 window_start = minTimestamp.ToUniversalTime(),
                 window_end = maxTimestamp.ToUniversalTime(),

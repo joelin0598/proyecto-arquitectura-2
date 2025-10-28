@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Docker_Projects\\proyecto-arquitectura-2-778c095956e1c4bbbc8000f1a12e7c58fc0d0693\\Correlator\\Correlator.csproj": {}
+    "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj": {}
   },
   "projects": {
-    "C:\\Docker_Projects\\proyecto-arquitectura-2-778c095956e1c4bbbc8000f1a12e7c58fc0d0693\\Correlator\\Correlator.csproj": {
+    "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Docker_Projects\\proyecto-arquitectura-2-778c095956e1c4bbbc8000f1a12e7c58fc0d0693\\Correlator\\Correlator.csproj",
+        "projectUniqueName": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj",
         "projectName": "Correlator",
-        "projectPath": "C:\\Docker_Projects\\proyecto-arquitectura-2-778c095956e1c4bbbc8000f1a12e7c58fc0d0693\\Correlator\\Correlator.csproj",
-        "packagesPath": "C:\\Users\\joelm\\.nuget\\packages\\",
-        "outputPath": "C:\\Docker_Projects\\proyecto-arquitectura-2-778c095956e1c4bbbc8000f1a12e7c58fc0d0693\\Correlator\\obj\\",
+        "projectPath": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\Correlator.csproj",
+        "packagesPath": "C:\\Users\\gbval\\.nuget\\packages\\",
+        "outputPath": "D:\\backup\\Escritorio\\Universidad\\Semestre 8\\Arquitectura 2\\Proyecto\\proyecto-arquitectura-2\\Correlator\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "D:\\Programas\\Visual Studio Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\joelm\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\gbval\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -114,7 +120,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.413/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "D:\\Programas\\NETDotnet\\Net8\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
