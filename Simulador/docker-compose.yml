@@ -4,4 +4,4 @@ services:
     build: .
     container_name: simulator
     environment:
-      - SLEEP_TIME=0.25
+      - SLEEP_TIME=0.066
