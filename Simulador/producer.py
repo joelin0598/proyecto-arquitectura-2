@@ -6,9 +6,9 @@ import random
 import os
 
 URL = os.getenv("EVENT_ENDPOINT", "http://localhost:5245/events")
-SLEEP_TIME = float(os.getenv("SLEEP_TIME", "0.25"))
+SLEEP_TIME = float(os.getenv("SLEEP_TIME", "0.066"))
 
-# Rango de lat/lon (zona ciudad de Guatemala simulada)
+# Rango general (referencia) de la ciudad simulada
 LAT_RANGE = (14.620, 14.635)
 LON_RANGE = (-90.525, -90.515)
 
@@ -21,6 +21,20 @@ EVENT_TYPES = [
 ]
 
 SEVERITIES = ["info", "warning", "critical"]
+
+# Zonas candidatas (perimetro de 5km)
+ZONES = ["zone_1", "zone_3", "zone_4", "zone_5", "zone_9", "zone_11", "zone_12", "zone_13"]
+
+ZONE_BOUNDS = {
+    "zone_1": ((14.620, 14.623), (-90.525, -90.523)),
+    "zone_3": ((14.623, 14.626), (-90.523, -90.521)),
+    "zone_4": ((14.626, 14.629), (-90.521, -90.519)),
+    "zone_5": ((14.629, 14.632), (-90.519, -90.517)),
+    "zone_9": ((14.632, 14.635), (-90.517, -90.515)),
+    "zone_11": ((14.620, 14.622), (-90.517, -90.515)),
+    "zone_12": ((14.624, 14.626), (-90.525, -90.523)),
+    "zone_13": ((14.632, 14.634), (-90.521, -90.519)),
+}
 
 def random_payload(event_type):
     if event_type == "panic.button":
@@ -62,8 +76,21 @@ def random_payload(event_type):
             "origen": random.choice(["usuario", "app", "punto_fisico"])
         }
 
+def pick_lat_lon_for_zone(zone: str):
+    """
+    Devuelve (lat, lon) coherentes con la zona dada.
+    Si por algún motivo la zona no está en el mapa, usa el rango global.
+    """
+    lat_range, lon_range = ZONE_BOUNDS.get(zone, (LAT_RANGE, LON_RANGE))
+    lat = round(random.uniform(*lat_range), 6)
+    lon = round(random.uniform(*lon_range), 6)
+    return lat, lon
+
 def generate_event():
     event_type = random.choice(EVENT_TYPES)
+    zone = random.choice(ZONES)  # mantiene la mayor probabilidad para zone_5
+    lat, lon = pick_lat_lon_for_zone(zone)
+
     event = {
         "event_version": "1.0",
         "event_type": event_type,
@@ -75,9 +102,9 @@ def generate_event():
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         "partition_key": event_type,  # simplificado: usar event_type
         "geo": {
-            "zone": "zone_4",
-            "lat": round(random.uniform(*LAT_RANGE), 6),
-            "lon": round(random.uniform(*LON_RANGE), 6)
+            "zone": zone,  # ahora coherente con lat/lon
+            "lat": lat,
+            "lon": lon
         },
         "severity": random.choice(SEVERITIES),
         "payload": random_payload(event_type)
@@ -91,7 +118,7 @@ def main():
         try:
             response = requests.post(URL, json=event, timeout=5)
             counter += 1
-            print(f"[{counter}] Sent event_id={event['event_id']} type={event['event_type']} -> {response.status_code}")
+            print(f"[{counter}] Sent event_id={event['event_id']} type={event['event_type']} zone={event['geo']['zone']} -> {response.status_code}")
         except Exception as e:
             print(f"[ERROR] Could not send event: {e}")
         time.sleep(SLEEP_TIME)

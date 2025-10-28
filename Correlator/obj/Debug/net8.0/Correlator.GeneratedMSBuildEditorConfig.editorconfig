@@ -16,6 +16,6 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = Correlator
-build_property.ProjectDir = D:\backup\Escritorio\Universidad\Semestre 8\Arquitectura 2\Proyecto\proyecto-arquitectura-2\Correlator\
+build_property.ProjectDir = C:\Docker_Projects\proyecto-arquitectura-2-778c095956e1c4bbbc8000f1a12e7c58fc0d0693\Correlator\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 

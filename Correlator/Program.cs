@@ -6,6 +6,7 @@ using StackExchange.Redis;
 using Correlator.Data;
 using EventProcessor.Services;
 using Prometheus; // 👈 Para métricas
+using Nest;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -23,11 +24,20 @@ builder.Services.AddHostedService<KafkaConsumer>();
 string redisConnection = "cache-redis:6379,abortConnect=False";
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnection));
 
+//metricas Elasticsearch
+var settings = new ConnectionSettings(new Uri("http://elasticsearch:9200"))
+    .DefaultIndex("events");
+
+var esClient = new ElasticClient(settings);
+builder.Services.AddSingleton<IElasticClient>(esClient);
+
 var app = builder.Build();
 
 // ✅ Iniciar servidor de métricas Prometheus en el puerto 5246
 var metricServer = new KestrelMetricServer(port: 5246);
 metricServer.Start();
+
+
 
 using (var scope = app.Services.CreateScope())
 {

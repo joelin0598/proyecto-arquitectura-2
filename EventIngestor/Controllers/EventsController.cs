@@ -3,7 +3,9 @@ using EventIngestor.Models;
 using EventIngestor.Services;
 using StackExchange.Redis;
 using System.Text.Json;
-using Prometheus; // 👈 NUEVO: Agregar este using
+using Prometheus;
+using Metrics = Prometheus.Metrics; // 👈 Desambiguar
+using Nest; // 👈 NUEVO: Elasticsearch
 
 namespace EventIngestor.Controllers
 {
@@ -12,32 +14,35 @@ namespace EventIngestor.Controllers
     public class EventsController : ControllerBase
     {
         private readonly IDatabase _redisDatabase;
-        
-        // 👇 NUEVO: Métricas personalizadas de Prometheus
+        private readonly IElasticClient _esClient;
+        private readonly KafkaProducer _producer;
+
+        // 👇 Métricas personalizadas de Prometheus
         private static readonly Counter _eventsReceived = Metrics
             .CreateCounter("urbanevents_events_received_total", "Total de eventos recibidos", 
                 new CounterConfiguration
                 {
                     LabelNames = new[] { "event_type", "location", "status" }
                 });
-                    
+
         private static readonly Histogram _eventProcessingTime = Metrics
             .CreateHistogram("urbanevents_event_processing_seconds", "Tiempo de procesamiento de eventos",
                 new HistogramConfiguration
                 {
                     LabelNames = new[] { "event_type" },
-                    Buckets = Histogram.ExponentialBuckets(0.01, 2, 10) // 10ms a ~5s
+                    Buckets = Histogram.ExponentialBuckets(0.01, 2, 10)
                 });
 
-        public EventsController(IConnectionMultiplexer redisConnection)
+        public EventsController(IConnectionMultiplexer redisConnection, IElasticClient esClient, KafkaProducer producer)
         {
             _redisDatabase = redisConnection.GetDatabase();
+            _esClient = esClient;
+            _producer = producer;
         }
 
         [HttpPost]
         public async Task<IActionResult> IngestEvent([FromBody] CanonicalEvent evento)
         {
-            // 👇 NUEVO: Medir tiempo de procesamiento
             using (_eventProcessingTime.WithLabels(evento.event_type ?? "unknown").NewTimer())
             {
                 try
@@ -47,56 +52,56 @@ namespace EventIngestor.Controllers
                         evento.event_id = Guid.NewGuid().ToString();
 
                     if (string.IsNullOrWhiteSpace(evento.timestamp))
-                        evento.timestamp = DateTime.UtcNow.ToString("o"); // ISO 8601
+                        evento.timestamp = DateTime.UtcNow.ToString("o");
 
                     if (string.IsNullOrWhiteSpace(evento.partition_key))
                         evento.partition_key = evento.geo?.zone ?? "default-zone";
 
-                    // Serializar evento a JSON
                     var jsonEvento = JsonSerializer.Serialize(evento);
-
-                    // Usamos correlation_id como la clave para la lista de Redis
                     var redisKey = $"events_{evento.geo.zone}";
-
-                    // Agregar el evento a la lista de Redis (usamos ListRightPush para agregar al final)
                     await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
 
-                    // Publicar en Kafka
-                    var producer = new KafkaProducer();
+                    await _producer.PublishAsync(evento);
                     try
                     {
-                        await producer.PublishAsync(evento);
-                        
-                        // 👇 NUEVO: Métrica de evento exitoso
+                        await _producer.PublishAsync(evento);
+
+
+                        // 👇 Publicar en Elasticsearch
+                        await _esClient.IndexDocumentAsync(new {
+                            event_id = evento.event_id,
+                            event_type = evento.event_type,
+                            timestamp = evento.timestamp,
+                            geo = new {
+                                zone = evento.geo?.zone,
+                                lat = evento.geo?.lat,
+                                lon = evento.geo?.lon
+                            },
+                            severity = evento.severity,
+                            payload = evento.payload
+                        });
+
                         _eventsReceived
-                            .WithLabels(evento.event_type?? "unknown", 
-                                      evento.geo?.zone ?? "unknown", 
-                                      "success")
+                            .WithLabels(evento.event_type ?? "unknown", evento.geo?.zone ?? "unknown", "success")
                             .Inc();
                     }
                     catch (Exception ex)
                     {
-                        // 👇 NUEVO: Métrica de evento con error en Kafka
                         _eventsReceived
-                            .WithLabels(evento.event_type ?? "unknown", 
-                                      evento.geo?.zone ?? "unknown", 
-                                      "kafka_error")
+                            .WithLabels(evento.event_type ?? "unknown", evento.geo?.zone ?? "unknown", "kafka_error")
                             .Inc();
-                            
+
                         Console.WriteLine($"[WARN] No se pudo conectar a Kafka: {ex.Message}");
                     }
 
-                    return Accepted(new { message = "Evento publicado en Kafka", evento });
+                    return Accepted(new { message = "Evento publicado en Kafka y Elasticsearch", evento });
                 }
                 catch (Exception ex)
                 {
-                    // 👇 NUEVO: Métrica de error general
                     _eventsReceived
-                        .WithLabels(evento.event_type ?? "unknown", 
-                                  evento.geo?.zone ?? "unknown", 
-                                  "error")
+                        .WithLabels(evento.event_type ?? "unknown", evento.geo?.zone ?? "unknown", "error")
                         .Inc();
-                        
+
                     Console.WriteLine($"[ERROR] Error procesando evento: {ex.Message}");
                     return StatusCode(500, new { error = "Error interno del servidor" });
                 }

@@ -8,7 +8,11 @@ using StackExchange.Redis;
 using Correlator.Services;
 using Correlator.Models;
 using Correlator.Data;
-using Prometheus; // 👈 NUEVO: para metricas
+using Prometheus;
+using Metrics = Prometheus.Metrics; // 👈 Esto desambiguará el uso
+using Nest;
+
+
 
 namespace EventProcessor.Services;
 
@@ -112,7 +116,7 @@ public class KafkaConsumer : BackgroundService
                     if (eventsList.Length > 0)
                     {
                         List<RawEventDto> correlatedEvents = eventsList.Select(x => System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
-                        
+
                         DateTime fiveMinutesAgo = DateTime.UtcNow.AddMinutes(-5);
                         correlatedEvents = correlatedEvents.Where(x => DateTime.TryParse(x.timestamp, out DateTime timestamp) && timestamp >= fiveMinutesAgo).ToList();
                         await _redisDatabase.KeyDeleteAsync(redisKey);
@@ -146,6 +150,18 @@ public class KafkaConsumer : BackgroundService
                     db.events.Add(evento);
                     await db.SaveChangesAsync();
 
+                    var esClient = scope.ServiceProvider.GetRequiredService<IElasticClient>();
+
+                    await esClient.IndexDocumentAsync(new {
+                        event_id = evento.event_id,
+                        event_type = evento.event_type,
+                        timestamp = evento.ts_utc,
+                        geo = new { zone = evento.zone, lat = evento.geo_lat, lon = evento.geo_lon },
+                        severity = evento.severity,
+                        payload = evento.payload
+                    });
+
+
                     Console.WriteLine($"✅ Evento guardado: {evento.event_id} | Zona: {evento.zone} | Tipo: {raw.event_type}");
                 }
                 else
@@ -167,6 +183,8 @@ public class KafkaConsumer : BackgroundService
 
         consumer.Close();
     }
+    
+    
 
     public async Task PublishAsync(object evento)
     {
@@ -237,7 +255,7 @@ public class KafkaConsumer : BackgroundService
         }
     }
 
-    private async Task makeAlert(List<RawEventDto> events, string alertType, string severity, List<RawEventDto> rawEventDtos)
+    private async Task makeAlert(List<RawEventDto> events, string severity, List<RawEventDto> rawEventDtos)
     {
         if (events.Count > 0)
         {
@@ -269,7 +287,7 @@ public class KafkaConsumer : BackgroundService
             {
                 alert_id = Guid.NewGuid(),
                 correlation_id = Guid.Parse(correlation),
-                type = alertType, // 👈 Usar el tipo específico de alerta
+                type = Utils.DetermineAlertType(events), // 👈 Usar el tipo específico de alerta
                 score = (decimal)Utils.CalculateAlertScore(events),
                 window_start = minTimestamp.ToUniversalTime(),
                 window_end = maxTimestamp.ToUniversalTime(),
@@ -295,25 +313,6 @@ public class KafkaConsumer : BackgroundService
         return criticalTypes.Any(type => 
             (eventData.event_type?.ToLower().Contains(type) == true) ||
             (eventData.payload?.ToString()?.ToLower().Contains(type) == true));
-    }
-
-    private string DetermineCriticalAlertType(RawEventDto eventData)
-    {
-        var eventType = eventData.event_type?.ToLower() ?? "";
-        var payload = eventData.payload?.ToString()?.ToLower() ?? "";
-
-        if (eventType.Contains("fire") || payload.Contains("fire") || eventType.Contains("incendio"))
-            return "fire_emergency";
-        if (eventType.Contains("accident") || payload.Contains("accident") || eventType.Contains("accidente"))
-            return "traffic_accident";
-        if (eventType.Contains("shooting") || payload.Contains("shooting") || eventType.Contains("disparo"))
-            return "shooting_incident";
-        if (eventType.Contains("explosion") || payload.Contains("explosion") || eventType.Contains("explosión"))
-            return "explosion_emergency";
-        if (eventType.Contains("earthquake") || payload.Contains("earthquake") || eventType.Contains("terremoto"))
-            return "earthquake_alert";
-
-        return "critical_incident";
     }
 
     private string DetermineAlertCategory(RawEventDto eventData)
