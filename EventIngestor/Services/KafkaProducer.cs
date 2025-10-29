@@ -1,6 +1,6 @@
 using Confluent.Kafka;
 using System.Text.Json;
-using Nest;
+using Nest; //Para Elasticsearch
 using EventIngestor.Models;
 
 namespace EventIngestor.Services
@@ -32,6 +32,7 @@ namespace EventIngestor.Services
 
             Console.WriteLine($"✅ Evento publicado en Kafka: {deliveryResult.TopicPartitionOffset}");
 
+            //Lógica para indexar en Elasticsearch
             await _esClient.IndexDocumentAsync(new
             {
                 event_id = evento.event_id,

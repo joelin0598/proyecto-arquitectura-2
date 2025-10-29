@@ -62,6 +62,8 @@ public class KafkaConsumer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Asegurar que el índice de alertas exista en Elasticsearch
+        await EnsureAlertsIndexExistsAsync();
         var kafkaConfig = new ConsumerConfig
         {
             BootstrapServers = "kafka:9092",
@@ -108,18 +110,38 @@ public class KafkaConsumer : BackgroundService
                         .Inc();
 
                     string redisKey = $"events_{raw.geo.zone}";
+                    var jsonEvento = JsonSerializer.Serialize(raw);
 
+                    // ✅ Leer eventos actuales en Redis
                     var eventsList = await _redisDatabase.ListRangeAsync(redisKey);
+
+                    // ✅ Verificar si el evento ya existe por event_id
+                    bool alreadyExists = eventsList.Any(x => x.ToString().Contains(raw.trace_id ?? ""));
+
+                    if (!alreadyExists)
+                    {
+                        await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
+
+                        // ✅ Agregar TTL si es la primera vez que se escribe
+                        if (eventsList.Length == 0)
+                        {
+                            await _redisDatabase.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(10));
+                        }
+                    }
+
 
                     // 👇 Actualizar métrica de eventos activos por zona
                     UpdateActiveEventsMetrics(eventsList, raw.geo.zone);
 
                     if (eventsList.Length > 0)
-                    {
+                    {   
+                        //Filtra eventos recientes (últimos 5 minutos):
                         List<RawEventDto> correlatedEvents = eventsList.Select(x => System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x)).ToList();
 
                         DateTime fiveMinutesAgo = DateTime.UtcNow.AddMinutes(-5);
                         correlatedEvents = correlatedEvents.Where(x => DateTime.TryParse(x.timestamp, out DateTime timestamp) && timestamp >= fiveMinutesAgo).ToList();
+                        
+                        //Elimina la lista y la reescribe con los eventos filtrados
                         await _redisDatabase.KeyDeleteAsync(redisKey);
                         var listSerialize = correlatedEvents.Select(x => JsonSerializer.Serialize(x));
                         await _redisDatabase.ListRightPushAsync(redisKey, listSerialize.Select(x => (RedisValue)x).ToArray());
@@ -151,6 +173,7 @@ public class KafkaConsumer : BackgroundService
                     db.events.Add(evento);
                     await db.SaveChangesAsync();
 
+                    //Indexar a Elasticsearch
                     var esClient = scope.ServiceProvider.GetRequiredService<IElasticClient>();
 
                     await esClient.IndexDocumentAsync(new {
@@ -296,6 +319,22 @@ public class KafkaConsumer : BackgroundService
             db.alerts.Add(alert);
             await db.SaveChangesAsync();
 
+            // ✅ Indexar alerta en Elasticsearch en índice separado
+            var esClient = scope.ServiceProvider.GetRequiredService<IElasticClient>();
+
+            await esClient.IndexAsync(new {
+                alert_id = alert.alert_id,
+                type = alert.type,
+                score = alert.score,
+                zone = alert.zone,
+                timestamp = alert.created_at, // 👈 Campo obligatorio para Grafana
+                window_start = alert.window_start,
+                window_end = alert.window_end,
+                evidence = alert.evidence
+            }, i => i.Index("alerts"));
+
+
+
             Console.WriteLine($"🚨 ALERTA GENERADA: {alertType} | Severidad: {severity} | Zona: {events[0].geo?.zone}");
         }
     }
@@ -324,10 +363,14 @@ public class KafkaConsumer : BackgroundService
         {
             var eventsInZone = eventsList
                 .Where(x => !x.IsNullOrEmpty)
-                .Select(x => {
-                    try {
+                .Select(x =>
+                {
+                    try
+                    {
                         return System.Text.Json.JsonSerializer.Deserialize<RawEventDto>(x);
-                    } catch {
+                    }
+                    catch
+                    {
                         return null;
                     }
                 })
@@ -343,4 +386,43 @@ public class KafkaConsumer : BackgroundService
             Console.WriteLine($"⚠️ Error actualizando métricas de eventos activos: {ex.Message}");
         }
     }
+    //Crear índicee de alertas para Elasticsearch
+    private async Task EnsureAlertsIndexExistsAsync()
+{
+    using var scope = _services.CreateScope();
+    var esClient = scope.ServiceProvider.GetRequiredService<IElasticClient>();
+
+    var existsResponse = await esClient.Indices.ExistsAsync("alerts");
+    if (!existsResponse.Exists)
+    {
+        var createResponse = await esClient.Indices.CreateAsync("alerts", c => c
+            .Map(m => m
+                .Properties(ps => ps
+                    .Date(d => d.Name("timestamp"))
+                    .Date(d => d.Name("window_start"))
+                    .Date(d => d.Name("window_end"))
+                    .Keyword(k => k.Name("alert_id"))
+                    .Keyword(k => k.Name("type"))
+                    .Keyword(k => k.Name("zone"))
+                    .Number(n => n.Name("score").Type(NumberType.Float))
+                    .Text(t => t.Name("evidence"))
+                )
+            )
+        );
+
+        if (createResponse.IsValid)
+        {
+            Console.WriteLine("✅ Índice 'alerts' creado correctamente con mapeo explícito.");
+        }
+        else
+        {
+            Console.WriteLine($"❌ Error al crear índice 'alerts': {createResponse.ServerError?.Error?.Reason}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("ℹ️ Índice 'alerts' ya existe.");
+    }
+}
+
 }

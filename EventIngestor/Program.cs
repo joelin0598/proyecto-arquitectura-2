@@ -40,7 +40,7 @@ app.UseHttpMetrics();
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapMetrics();
-    endpoints.MapHealthChecks("/health");
+    endpoints.MapHealthChecks("/events/health");
 });
 
 app.UseHttpsRedirection();

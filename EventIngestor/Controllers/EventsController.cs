@@ -58,10 +58,24 @@ namespace EventIngestor.Controllers
                         evento.partition_key = evento.geo?.zone ?? "default-zone";
 
                     var jsonEvento = JsonSerializer.Serialize(evento);
-                    var redisKey = $"events_{evento.geo.zone}";
-                    await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
+                    var redisKey = $"events_{evento.geo?.zone ?? "unknown"}";
 
-                    await _producer.PublishAsync(evento);
+                    // ✅ Verificar si el evento ya existe por event_id
+                    var existingEvents = await _redisDatabase.ListRangeAsync(redisKey);
+                    bool alreadyExists = existingEvents.Any(x => x.ToString().Contains(evento.event_id));
+
+                    if (!alreadyExists)
+                    {
+                        await _redisDatabase.ListRightPushAsync(redisKey, jsonEvento);
+
+                        // ✅ Agregar TTL de 10 minutos si es la primera vez que se escribe
+                        if (existingEvents.Length == 0)
+                        {
+                            await _redisDatabase.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(10));
+                        }
+                    }
+
+                    
                     try
                     {
                         await _producer.PublishAsync(evento);
