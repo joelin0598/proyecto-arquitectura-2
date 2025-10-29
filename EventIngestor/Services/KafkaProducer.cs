@@ -33,22 +33,25 @@ namespace EventIngestor.Services
             Console.WriteLine($"✅ Evento publicado en Kafka: {deliveryResult.TopicPartitionOffset}");
 
             //Lógica para indexar en Elasticsearch
-            await _esClient.IndexDocumentAsync(new
+            var indexRequest = new IndexRequest<object>(IndexName.From<object>("events"))
             {
-                event_id = evento.event_id,
-                event_type = evento.event_type,
-                timestamp = evento.timestamp,
-                geo = new
-                {
-                    zone = evento.geo?.zone,
-                    lat = evento.geo?.lat,
-                    lon = evento.geo?.lon
-                },
-                severity = evento.severity,
-                payload = evento.payload
-            });
+                Document = new {
+                    event_id = evento.event_id,
+                    event_type = evento.event_type,
+                    timestamp = evento.timestamp,
+                    geo = new {
+                        zone = evento.geo?.zone,
+                        lat = evento.geo?.lat,
+                        lon = evento.geo?.lon
+                    },
+                    severity = evento.severity,
+                    payload = evento.payload
+                }
+            };
 
-            Console.WriteLine($"📦 Evento indexado en Elasticsearch: {evento.event_id}");
+            var response = await _esClient.IndexAsync(indexRequest);
+
+            Console.WriteLine($"📦 Indexación: {response.Result}, ID: {response.Id}");
         }
     }
 }

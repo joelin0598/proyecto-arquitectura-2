@@ -164,10 +164,8 @@ services:
       - "--storage.tsdb.retention.time=200h"
       - "--web.enable-lifecycle"
     depends_on:
-      event-ingestor:
-        condition: service_healthy
-      correlator:
-        condition: service_started
+      - event-ingestor
+      - correlator
     networks: [labnet]
 
   node-exporter:

@@ -62,8 +62,7 @@ public class KafkaConsumer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Asegurar que el índice de alertas exista en Elasticsearch
-        await EnsureAlertsIndexExistsAsync();
+
         var kafkaConfig = new ConsumerConfig
         {
             BootstrapServers = "kafka:9092",
@@ -386,43 +385,4 @@ public class KafkaConsumer : BackgroundService
             Console.WriteLine($"⚠️ Error actualizando métricas de eventos activos: {ex.Message}");
         }
     }
-    //Crear índicee de alertas para Elasticsearch
-    private async Task EnsureAlertsIndexExistsAsync()
-{
-    using var scope = _services.CreateScope();
-    var esClient = scope.ServiceProvider.GetRequiredService<IElasticClient>();
-
-    var existsResponse = await esClient.Indices.ExistsAsync("alerts");
-    if (!existsResponse.Exists)
-    {
-        var createResponse = await esClient.Indices.CreateAsync("alerts", c => c
-            .Map(m => m
-                .Properties(ps => ps
-                    .Date(d => d.Name("timestamp"))
-                    .Date(d => d.Name("window_start"))
-                    .Date(d => d.Name("window_end"))
-                    .Keyword(k => k.Name("alert_id"))
-                    .Keyword(k => k.Name("type"))
-                    .Keyword(k => k.Name("zone"))
-                    .Number(n => n.Name("score").Type(NumberType.Float))
-                    .Text(t => t.Name("evidence"))
-                )
-            )
-        );
-
-        if (createResponse.IsValid)
-        {
-            Console.WriteLine("✅ Índice 'alerts' creado correctamente con mapeo explícito.");
-        }
-        else
-        {
-            Console.WriteLine($"❌ Error al crear índice 'alerts': {createResponse.ServerError?.Error?.Reason}");
-        }
-    }
-    else
-    {
-        Console.WriteLine("ℹ️ Índice 'alerts' ya existe.");
-    }
-}
-
 }
