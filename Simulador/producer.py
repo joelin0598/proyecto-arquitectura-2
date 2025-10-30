@@ -77,10 +77,6 @@ def random_payload(event_type):
         }
 
 def pick_lat_lon_for_zone(zone: str):
-    """
-    Devuelve (lat, lon) coherentes con la zona dada.
-    Si por algún motivo la zona no está en el mapa, usa el rango global.
-    """
     lat_range, lon_range = ZONE_BOUNDS.get(zone, (LAT_RANGE, LON_RANGE))
     lat = round(random.uniform(*lat_range), 6)
     lon = round(random.uniform(*lon_range), 6)
@@ -88,7 +84,7 @@ def pick_lat_lon_for_zone(zone: str):
 
 def generate_event():
     event_type = random.choice(EVENT_TYPES)
-    zone = random.choice(ZONES)  # mantiene la mayor probabilidad para zone_5
+    zone = random.choice(ZONES)
     lat, lon = pick_lat_lon_for_zone(zone)
 
     event = {
@@ -100,9 +96,9 @@ def generate_event():
         "correlation_id": str(uuid.uuid4()),
         "trace_id": str(uuid.uuid4()),
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "partition_key": event_type,  # simplificado: usar event_type
+        "partition_key": event_type,
         "geo": {
-            "zone": zone,  # ahora coherente con lat/lon
+            "zone": zone,
             "lat": lat,
             "lon": lon
         },
